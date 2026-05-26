@@ -124,7 +124,7 @@ def _write_meta_track(track: mido.MidiTrack, song: ResolvedSong) -> None:
     messages: list[tuple[int, mido.MetaMessage]] = []
 
     for t in song.tempos:
-        us_per_beat = round(60_000_000 / t.tempo_bpm)
+        us_per_beat = round(60_000_000 / t.tempo_qpm)
         messages.append((t.tick, mido.MetaMessage(
             "set_tempo", tempo=us_per_beat, time=0)))
 

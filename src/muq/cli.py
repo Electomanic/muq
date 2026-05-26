@@ -222,7 +222,7 @@ def _cmd_info(args) -> int:
     print(f"Song:  {s.title or '(untitled)'}")
     if s.artist:
         print(f"  artist: {s.artist}")
-    print(f"  tempo:  {s.tempo} bpm")
+    print(f"  tempo:  {s.tempo} qpm")
     print(f"  time:   {s.time}")
     if s.key:
         print(f"  key:    {s.key}", end="")
