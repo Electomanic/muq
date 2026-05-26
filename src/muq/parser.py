@@ -57,21 +57,21 @@ def _parse_event(d: dict) -> (
         return CCEvent(
             cc=d["cc"],
             value=d["value"],
-            beat=d.get("beat"),
+            beat=d.get("beat", 1.0),
             interp=d.get("interp", "step"),
             offset_beats=d.get("offset_beats", 0.0),
         )
     if "pitch_bend" in d:
         return PitchBendEvent(
             pitch_bend=d["pitch_bend"],
-            beat=d.get("beat"),
+            beat=d.get("beat", 1.0),
             interp=d.get("interp", "step"),
             offset_beats=d.get("offset_beats", 0.0),
         )
     if "aftertouch" in d:
         return AftertouchEvent(
             aftertouch=d["aftertouch"],
-            beat=d.get("beat"),
+            beat=d.get("beat", 1.0),
             interp=d.get("interp", "step"),
             offset_beats=d.get("offset_beats", 0.0),
         )
@@ -79,7 +79,7 @@ def _parse_event(d: dict) -> (
         return TextEvent(
             text=d["text"],
             type=d.get("type", "text"),
-            beat=d.get("beat"),
+            beat=d.get("beat", 1.0),
             offset_beats=d.get("offset_beats", 0.0),
         )
     raise ValueError(f"Unrecognized event: {d}")
@@ -95,7 +95,7 @@ def _parse_pattern(name: str, d: dict) -> Pattern:
 
 def _parse_track(name: str, d: dict) -> Track:
     return Track(
-        instrument=d["instrument"],
+        instrument=d["instrument"].lower(),
         channel=d["channel"],
         volume=d.get("volume", 100),
         pan=d.get("pan", "center"),
@@ -168,7 +168,7 @@ def parse(source: str | Path) -> MuqDocument:
         artist=song_d.get("artist"),
         key=song_d.get("key"),
         scale_mode=song_d.get("scale_mode"),
-        version=song_d.get("version"),
+        spec_version=song_d.get("spec_version", "1.0.0"),
     )
 
     tracks = {name: _parse_track(name, td) for name, td in raw["tracks"].items()}

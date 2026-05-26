@@ -1,0 +1,22 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  chords:
+    bars:
+      - - {note: [C4, E4, G4], dur: w}
+      - - {note: [F4, A4, C5], dur: w}
+      - - {note: [G4, B4, D5], dur: w}
+      - - {note: [C4, E4, G4], dur: w}
+arrangement:
+  - name: rit
+    tempo: 120
+    tempo_events:
+      - {bar: 1, beat: 1, tempo: 120}
+      - {bar: 4, beat: 1, tempo: 80, interp: linear}
+    patterns:
+      piano: chords

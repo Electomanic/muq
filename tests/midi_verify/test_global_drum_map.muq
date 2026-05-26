@@ -1,0 +1,24 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+patterns:
+  custom_names:
+    notation: percussion
+    bars:
+      - - {beat: 1, note: shaker, dur: e}
+        - {beat: 1.5, note: shaker, dur: e}
+        - {beat: 2, note: my_cowbell, dur: q}
+        - {beat: 3, note: shaker, dur: e}
+        - {beat: 3.5, note: shaker, dur: e}
+        - {beat: 4, note: my_cowbell, dur: q}
+arrangement:
+  - name: test
+    patterns:
+      drums: custom_names
+drum_map:
+  shaker: 70
+  my_cowbell: 56

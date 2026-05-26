@@ -1,0 +1,23 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  tie_within_bar:
+    bars:
+      - - {note: C4, dur: h, tie: true}
+        - {note: C4, dur: h}
+  tie_across_bars:
+    bars:
+      - - {note: E4, dur: w, tie: true}
+      - - {note: E4, dur: w}
+arrangement:
+  - name: within
+    patterns:
+      piano: tie_within_bar
+  - name: across
+    patterns:
+      piano: tie_across_bars

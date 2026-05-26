@@ -1,0 +1,30 @@
+# test_cc_automation.muq — Verify CC and pitch bend events.
+# Tests: CC messages at specific beats, pitch bend events.
+# Expected MIDI: CC #74 values at beats 1,2,3,4; pitch bend at beats 1,3.
+
+song:
+  title: CC Automation Test
+  tempo: 120
+  time: 4/4
+
+tracks:
+  synth:
+    instrument: lead_sawtooth
+    channel: 1
+
+patterns:
+  auto:
+    bars:
+      - - {note: C4, dur: w, vel: 80}
+        - {beat: 1, cc: 74, value: 0}
+        - {beat: 2, cc: 74, value: 64}
+        - {beat: 3, cc: 74, value: 127}
+        - {beat: 4, cc: 74, value: 64}
+      - - {note: E4, dur: w, vel: 80}
+        - {beat: 1, pitch_bend: 0}
+        - {beat: 3, pitch_bend: 4096}
+
+arrangement:
+  - name: main
+    patterns:
+      synth: auto

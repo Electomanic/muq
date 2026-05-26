@@ -57,11 +57,11 @@ def _write_song(out: StringIO, doc: MuqDocument) -> None:
     out.write(f"  tempo: {_num(s.tempo)}\n")
     out.write(f"  time: \"{s.time}\"\n")
     if s.key is not None:
-        out.write(f"  key: {s.key}\n")
+        out.write(f"  key: {_yaml_scalar(s.key)}\n")
     if s.scale_mode is not None:
         out.write(f"  scale_mode: {s.scale_mode}\n")
-    if s.version is not None:
-        out.write(f"  version: \"{s.version}\"\n")
+    if s.spec_version != "1.0.0":
+        out.write(f"  spec_version: \"{s.spec_version}\"\n")
 
 
 def _write_tracks(out: StringIO, doc: MuqDocument) -> None:
@@ -71,7 +71,7 @@ def _write_tracks(out: StringIO, doc: MuqDocument) -> None:
         out.write(f"    channel: {track.channel}\n")
         if track.volume != 100:
             out.write(f"    volume: {track.volume}\n")
-        if track.pan != "center":
+        if track.pan != "center" and track.pan != 64:
             out.write(f"    pan: {_yaml_scalar(track.pan)}\n")
         if track.percussion is not None:
             out.write(f"    percussion: {str(track.percussion).lower()}\n")
@@ -192,7 +192,7 @@ def _rest_flow(e: RestEvent) -> str:
 
 def _cc_flow(e: CCEvent) -> str:
     parts: list[str] = []
-    if e.beat is not None:
+    if e.beat is not None and e.beat != 1.0:
         parts.append(f"beat: {_num(e.beat)}")
     parts.append(f"cc: {e.cc}")
     parts.append(f"value: {e.value}")
@@ -205,7 +205,7 @@ def _cc_flow(e: CCEvent) -> str:
 
 def _pb_flow(e: PitchBendEvent) -> str:
     parts: list[str] = []
-    if e.beat is not None:
+    if e.beat is not None and e.beat != 1.0:
         parts.append(f"beat: {_num(e.beat)}")
     parts.append(f"pitch_bend: {e.pitch_bend}")
     if e.interp != "step":
@@ -217,7 +217,7 @@ def _pb_flow(e: PitchBendEvent) -> str:
 
 def _at_flow(e: AftertouchEvent) -> str:
     parts: list[str] = []
-    if e.beat is not None:
+    if e.beat is not None and e.beat != 1.0:
         parts.append(f"beat: {_num(e.beat)}")
     parts.append(f"aftertouch: {e.aftertouch}")
     if e.interp != "step":
@@ -229,7 +229,7 @@ def _at_flow(e: AftertouchEvent) -> str:
 
 def _text_flow(e: TextEvent) -> str:
     parts: list[str] = []
-    if e.beat is not None:
+    if e.beat is not None and e.beat != 1.0:
         parts.append(f"beat: {_num(e.beat)}")
     parts.append(f"text: {_yaml_scalar(e.text)}")
     if e.type != "text":
@@ -247,13 +247,12 @@ def _pitch_canonical(p: str) -> str:
     """Uppercase note name for canonical form."""
     if not p:
         return p
-    # Drum names stay lowercase
-    if p[0].isalpha() and p[0].isupper() and len(p) >= 2 and (p[1].isdigit() or p[1] in "#b"):
+    # Check if it's a pitched notation (letter + optional accidental + octave)
+    from muq.gm import is_pitched_notation
+    if is_pitched_notation(p):
         return p[0].upper() + p[1:]
-    if p[0].islower():
-        # Drum name → lowercase
-        return p.lower()
-    return p
+    # Drum name → lowercase
+    return p.lower()
 
 
 def _num(v) -> str:

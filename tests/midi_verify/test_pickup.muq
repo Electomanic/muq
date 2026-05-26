@@ -1,0 +1,17 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  pickup_phrase:
+    bars:
+      - - {note: G4, dur: q}
+      - - {note: C4, dur: w}
+arrangement:
+  - name: intro
+    pickup_beats: 1
+    patterns:
+      piano: pickup_phrase

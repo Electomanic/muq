@@ -1,0 +1,22 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+  strings:
+    instrument: string_ensemble_1
+    channel: 2
+patterns:
+  melody:
+    bars:
+      - - {note: C4, dur: q}
+        - {note: D4, dur: q}
+        - {note: E4, dur: q}
+        - {note: F4, dur: q}
+arrangement:
+  - name: unison
+    patterns:
+      piano: melody
+      strings: melody

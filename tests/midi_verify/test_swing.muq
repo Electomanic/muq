@@ -1,0 +1,23 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  swing_groove:
+    swing: 67
+    bars:
+      - - {note: C4, dur: e}
+        - {note: D4, dur: e}
+        - {note: E4, dur: e}
+        - {note: F4, dur: e}
+        - {note: G4, dur: e}
+        - {note: A4, dur: e}
+        - {note: B4, dur: e}
+        - {note: C5, dur: e}
+arrangement:
+  - name: test
+    patterns:
+      piano: swing_groove

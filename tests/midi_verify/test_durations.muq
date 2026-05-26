@@ -1,0 +1,64 @@
+# test_durations.muq — Verify all standard duration tokens.
+# Tests: w, h, q, e, s, x and dotted variants map to correct tick counts.
+# Expected at PPQ=480: w=1920, h=960, q=480, e=240, s=120, x=60,
+#   qd=720, ed=360, hd=1440.
+
+song:
+  title: Duration Tokens Test
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  durations:
+    bars:
+      # Bar 1: w (whole = 4 beats)
+      - - {note: C4, dur: w, vel: 80}
+      # Bar 2: h + h (half = 2 beats each)
+      - - {note: D4, dur: h, vel: 80}
+        - {note: E4, dur: h, vel: 80}
+      # Bar 3: q + q + q + q (quarter = 1 beat each)
+      - - {note: F4, dur: q, vel: 80}
+        - {note: G4, dur: q, vel: 80}
+        - {note: A4, dur: q, vel: 80}
+        - {note: B4, dur: q, vel: 80}
+      # Bar 4: e x8 (eighth = 0.5 beats each)
+      - - {note: C5, dur: e, vel: 80}
+        - {note: B4, dur: e, vel: 80}
+        - {note: A4, dur: e, vel: 80}
+        - {note: G4, dur: e, vel: 80}
+        - {note: F4, dur: e, vel: 80}
+        - {note: E4, dur: e, vel: 80}
+        - {note: D4, dur: e, vel: 80}
+        - {note: C4, dur: e, vel: 80}
+      # Bar 5: s x16 (sixteenth = 0.25 beats each)
+      - - {note: C4, dur: s, vel: 70}
+        - {note: D4, dur: s, vel: 70}
+        - {note: E4, dur: s, vel: 70}
+        - {note: F4, dur: s, vel: 70}
+        - {note: G4, dur: s, vel: 70}
+        - {note: A4, dur: s, vel: 70}
+        - {note: B4, dur: s, vel: 70}
+        - {note: C5, dur: s, vel: 70}
+        - {note: C5, dur: s, vel: 70}
+        - {note: B4, dur: s, vel: 70}
+        - {note: A4, dur: s, vel: 70}
+        - {note: G4, dur: s, vel: 70}
+        - {note: F4, dur: s, vel: 70}
+        - {note: E4, dur: s, vel: 70}
+        - {note: D4, dur: s, vel: 70}
+        - {note: C4, dur: s, vel: 70}
+      # Bar 6: qd + ed + q (dotted quarter=1.5, dotted eighth=0.75, quarter=1)
+      - - {note: C4, dur: qd, vel: 80}
+        - {note: E4, dur: ed, vel: 80}
+        - {note: G4, dur: ed, vel: 80}
+        - {note: C5, dur: q, vel: 80}
+
+arrangement:
+  - name: main
+    patterns:
+      piano: durations

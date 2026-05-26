@@ -1,0 +1,47 @@
+# test_multi_track.muq — Verify multiple tracks export to correct channels/programs.
+# Tests: 3 tracks with different instruments, channels, simultaneous playback.
+# Expected MIDI: 3 instrument tracks + 1 meta track, each on correct channel.
+
+song:
+  title: Multi Track Test
+  tempo: 110
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+  bass:
+    instrument: electric_bass_finger
+    channel: 2
+  drums:
+    instrument: standard
+    channel: 10
+
+patterns:
+  piano_part:
+    bars:
+      - - {note: C4, dur: q, vel: 80}
+        - {note: E4, dur: q, vel: 80}
+        - {note: G4, dur: q, vel: 80}
+        - {note: C5, dur: q, vel: 80}
+
+  bass_part:
+    bars:
+      - - {note: C2, dur: h, vel: 90}
+        - {note: G2, dur: h, vel: 85}
+
+  drum_part:
+    notation: percussion
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 100}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: kick, dur: q, vel: 100}
+        - {beat: 4, note: snare, dur: q, vel: 100}
+
+arrangement:
+  - name: main
+    patterns:
+      piano: piano_part
+      bass: bass_part
+      drums: drum_part

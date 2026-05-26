@@ -1,0 +1,22 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  artic_test:
+    bars:
+      - - {note: C4, dur: q, articulation: staccato}
+        - {note: D4, dur: q, articulation: legato}
+        - {note: E4, dur: q, articulation: accent}
+        - {note: F4, dur: q, articulation: marcato}
+      - - {note: G4, dur: q, articulation: tenuto}
+        - {note: A4, dur: q, articulation: portato}
+        - {note: B4, dur: q, articulation: staccatissimo}
+        - {note: C5, dur: q}
+arrangement:
+  - name: test
+    patterns:
+      piano: artic_test

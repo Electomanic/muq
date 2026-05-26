@@ -1,0 +1,22 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  sustain_end:
+    bars:
+      - - {note: C4, dur: w, tie: true}
+  sustain_start:
+    bars:
+      - - {note: C4, dur: w}
+arrangement:
+  - name: section_a
+    patterns:
+      piano: sustain_end
+    tie_across: true
+  - name: section_b
+    patterns:
+      piano: sustain_start

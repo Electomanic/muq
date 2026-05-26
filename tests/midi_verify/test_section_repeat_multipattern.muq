@@ -1,0 +1,28 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+  bass:
+    instrument: acoustic_bass
+    channel: 2
+patterns:
+  piano_riff:
+    bars:
+      - - {note: C4, dur: q}
+        - {note: E4, dur: q}
+        - {note: G4, dur: h}
+  bass_line:
+    bars:
+      - - {note: C2, dur: h}
+        - {note: G2, dur: h}
+      - - {note: F2, dur: h}
+        - {note: C3, dur: h}
+arrangement:
+  - name: groove
+    repeat: 2
+    patterns:
+      piano: piano_riff
+      bass: bass_line

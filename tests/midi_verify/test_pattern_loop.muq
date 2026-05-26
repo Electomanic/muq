@@ -1,0 +1,36 @@
+# test_pattern_loop.muq — Verify short patterns loop to fill section length.
+# Tests: 1-bar drum pattern + 2-bar bass pattern in same section.
+# Expected MIDI: drums play in BOTH bars (loop), bass plays its 2 bars normally.
+
+song:
+  title: Pattern Loop Test
+  tempo: 120
+  time: 4/4
+
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+  bass:
+    instrument: acoustic_bass
+    channel: 2
+
+patterns:
+  one_bar_beat:
+    notation: percussion
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 100}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: kick, dur: q, vel: 100}
+        - {beat: 4, note: snare, dur: q, vel: 100}
+
+  two_bar_bass:
+    bars:
+      - - {note: C2, dur: w, vel: 80}
+      - - {note: G2, dur: w, vel: 80}
+
+arrangement:
+  - name: main
+    patterns:
+      drums: one_bar_beat
+      bass: two_bar_bass
