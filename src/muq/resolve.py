@@ -356,7 +356,6 @@ def _resolve_bar(
 ) -> None:
     """Resolve all events in a single bar to absolute ticks."""
     cursor = 1.0  # sequential cursor, 1-indexed
-    last_beat_addr_end: float | None = None
 
     for event in bar:
         if isinstance(event, NoteEvent):
@@ -365,12 +364,7 @@ def _resolve_bar(
             # Determine base position
             if event.beat is not None:
                 base_pos = event.beat
-                last_beat_addr_end = base_pos + dur_beats
             else:
-                # Sequential: cursor picks up after last beat-addressed event
-                if last_beat_addr_end is not None:
-                    cursor = last_beat_addr_end
-                    last_beat_addr_end = None
                 base_pos = cursor
                 cursor += dur_beats
 
@@ -431,11 +425,8 @@ def _resolve_bar(
         elif isinstance(event, RestEvent):
             dur_beats = _event_dur_beats(event)
             if event.beat is not None:
-                last_beat_addr_end = event.beat + dur_beats
+                pass  # beat-addressed rest: no cursor advancement
             else:
-                if last_beat_addr_end is not None:
-                    cursor = last_beat_addr_end
-                    last_beat_addr_end = None
                 cursor += dur_beats
 
         elif isinstance(event, CCEvent):

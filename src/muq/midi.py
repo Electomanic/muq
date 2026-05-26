@@ -73,8 +73,9 @@ def to_midi(song: ResolvedSong) -> mido.MidiFile:
                 messages.append((t.tick, mido.MetaMessage(
                     "text", text=t.text, time=0)))
 
-        # Sort by tick, with note_off before note_on at same tick
-        messages.sort(key=lambda m: (m[0], 0 if _is_note_off(m[1]) else 1))
+        # Sort by tick with deterministic same-tick ordering (§C.5):
+        # CC < pitch_bend < aftertouch < text/meta < note_off < note_on
+        messages.sort(key=lambda m: (m[0], _event_sort_priority(m[1])))
 
         # Convert absolute ticks to delta times
         prev_tick = 0
@@ -94,8 +95,24 @@ def save_midi(song: ResolvedSong, path: str | Path) -> None:
     mid.save(str(path))
 
 
-def _is_note_off(msg) -> bool:
-    return isinstance(msg, mido.Message) and msg.type == "note_off"
+def _event_sort_priority(msg) -> int:
+    """Return sort priority for same-tick ordering per §C.5."""
+    if isinstance(msg, mido.MetaMessage):
+        # Text/lyric/marker meta-events
+        return 7
+    if isinstance(msg, mido.Message):
+        t = msg.type
+        if t == "control_change":
+            return 4
+        if t == "pitchwheel":
+            return 5
+        if t == "aftertouch":
+            return 6
+        if t == "note_off":
+            return 8
+        if t == "note_on":
+            return 9 if msg.velocity > 0 else 8  # vel 0 = note-off
+    return 10
 
 
 def _write_meta_track(track: mido.MidiTrack, song: ResolvedSong) -> None:

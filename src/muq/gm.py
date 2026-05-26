@@ -302,7 +302,8 @@ _NOTE_TO_SEMITONE = {
 # Scale intervals (semitones from root) — §4.4 scale validation
 _SCALE_INTERVALS: dict[str, tuple[int, ...]] = {
     "major":            (0, 2, 4, 5, 7, 9, 11),
-    "minor":            (0, 2, 3, 5, 7, 8, 10),  # natural minor
+    "minor":            (0, 2, 3, 5, 7, 8, 10),  # alias for natural_minor
+    "natural_minor":    (0, 2, 3, 5, 7, 8, 10),
     "harmonic_minor":   (0, 2, 3, 5, 7, 8, 11),
     "melodic_minor":    (0, 2, 3, 5, 7, 9, 11),
     "dorian":           (0, 2, 3, 5, 7, 9, 10),
@@ -348,6 +349,21 @@ def scale_pitch_classes(key: str) -> frozenset[int] | None:
         return None
 
     return frozenset((root + i) % 12 for i in intervals)
+
+
+import re
+
+_KEY_GRAMMAR = re.compile(
+    r'^[A-Ga-g](?:#|b|##|bb)?\s+'
+    r'(?:major|minor|natural_minor|harmonic_minor|melodic_minor|'
+    r'dorian|phrygian|lydian|mixolydian|aeolian|locrian|'
+    r'pentatonic|minor_pentatonic|blues|chromatic)$'
+)
+
+
+def is_valid_key(key: str) -> bool:
+    """Check if a key string matches the muq key grammar."""
+    return _KEY_GRAMMAR.match(key) is not None
 
 
 def pitch_to_midi(pitch: str) -> int:

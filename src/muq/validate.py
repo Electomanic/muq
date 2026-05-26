@@ -11,6 +11,7 @@ from muq.gm import (
     beats_per_bar,
     gm_instrument_lookup,
     is_pitched_notation,
+    is_valid_key,
     parse_time_signature,
     pitch_to_midi,
     resolve_drum_name,
@@ -74,6 +75,11 @@ def _validate_song(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 
     if s.scale_mode and s.scale_mode not in ("off", "warn", "strict"):
         diags.append(Diagnostic("INVALID_SCALE_MODE", f"Unknown scale_mode: {s.scale_mode}", path="song.scale_mode"))
+
+    if s.key is not None and not is_valid_key(s.key):
+        diags.append(Diagnostic("INVALID_KEY_SIGNATURE",
+                                f"Key '{s.key}' does not match grammar: <tonic> <mode>",
+                                path="song.key"))
 
 
 def _check_time_sig(time_str: str, path: str, diags: list[Diagnostic]) -> bool:
@@ -229,6 +235,22 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
             bar_path = f"{path}.bars[{bi}]"
             bpb = pattern_bar_bpb.get((name, bi), beats_per_bar(doc.song.time))
             seq_total = 0.0
+
+            # §11.3 MIXED_BAR_POSITIONING — check note/rest events only
+            has_beat_note = False
+            has_seq_note = False
+            for event in bar:
+                if isinstance(event, (NoteEvent, RestEvent)):
+                    if getattr(event, "beat", None) is not None:
+                        has_beat_note = True
+                    else:
+                        has_seq_note = True
+            if has_beat_note and has_seq_note:
+                diags.append(Diagnostic(
+                    "MIXED_BAR_POSITIONING",
+                    "Bar mixes sequential and beat-addressed note/rest events",
+                    path=bar_path))
+
             for ei, event in enumerate(bar):
                 ev_path = f"{bar_path}[{ei}]"
                 _validate_event(event, ev_path, is_perc, per_track_map,
@@ -250,13 +272,20 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                             severity="warning", path=ev_path))
 
                 # §18.6 SEQUENTIAL_OVERFLOW — accumulate sequential durations
-                if beat is None:
+                if isinstance(event, (NoteEvent, RestEvent)) and beat is None:
                     seq_total += _event_dur_beats(event)
 
-            if seq_total > bpb:
+            # §11.4 tolerance-aware bar-total validation
+            _TOLERANCE = 0.001
+            if seq_total > bpb + _TOLERANCE:
                 diags.append(Diagnostic(
                     "SEQUENTIAL_OVERFLOW",
                     f"Sequential events total {seq_total} beats, exceeds bar ({bpb} beats)",
+                    severity="warning", path=bar_path))
+            elif seq_total > 0 and seq_total < bpb - _TOLERANCE:
+                diags.append(Diagnostic(
+                    "BAR_DURATION_MISMATCH",
+                    f"Sequential events total {seq_total} beats, less than bar ({bpb} beats)",
                     severity="warning", path=bar_path))
 
         # Scale validation (§4.4) — only for pitched patterns
