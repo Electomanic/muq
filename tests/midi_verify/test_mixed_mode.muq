@@ -6,14 +6,14 @@ tracks:
     instrument: acoustic_grand_piano
     channel: 1
 patterns:
-  mixed:
+  beat_addressed:
     bars:
-      # Beat-addressed chord, then sequential continues from its end
+      # All beat-addressed: chord then sequential notes placed explicitly
       - - {beat: 1, note: [C4, E4, G4], dur: h}
-        - {note: A4, dur: e}
-        - {note: B4, dur: e}
-        - {note: C5, dur: q}
+        - {beat: 3, note: A4, dur: e}
+        - {beat: 3.5, note: B4, dur: e}
+        - {beat: 4, note: C5, dur: q}
 arrangement:
   - name: test
     patterns:
-      piano: mixed
+      piano: beat_addressed

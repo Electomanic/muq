@@ -55,33 +55,33 @@ The `song` mapping contains metadata about the composition.
 |-----|------|----------|---------|-------------|
 | `title` | string | no | — | Song title |
 | `artist` | string | no | — | Artist/composer name |
-| `tempo` | number | **yes** | — | Tempo in BPM (beats per minute). Range: 1–999. |
+| `tempo` | number | **yes** | — | Tempo in QPM (quarter notes per minute). This is the MIDI-standard tempo unit: the number of quarter-note beats per minute. Range: 1–999. |
 | `time` | string | **yes** | — | Time signature as `numerator/denominator`, e.g. `4/4`, `3/4`, `7/8`. |
-| `key` | string | no | — | Key signature, e.g. `C major`, `F# minor`, `Bb major`. Informational only by default; see `scale_mode`. |
+| `key` | string | no | — | Key signature. Format: `<tonic> <mode>` where tonic matches `[A-G](#|b|##|bb)?` and mode is one of: `major`, `minor` (alias for `natural_minor`), `natural_minor`, `harmonic_minor`, `melodic_minor`, `dorian`, `phrygian`, `lydian`, `mixolydian`, `aeolian`, `locrian`, `pentatonic`, `minor_pentatonic`, `blues`, `chromatic`. Examples: `C major`, `F# minor`, `Bb dorian`. Informational only by default; see `scale_mode`. |
 | `scale_mode` | string | no | — | Scale validation mode: `"off"` (default), `"warn"`, or `"strict"`. See §4.2. |
 | `spec_version` | string | no | `"1.0.0"` | muq spec version this file conforms to. |
 
 ### 4.1 Time Signature
 
 The `time` value is a string of the form `N/D` where:
-- `N` (numerator) is a positive integer: the number of beats per bar.
-- `D` (denominator) is a positive integer that is a power of 2 (1, 2, 4, 8, 16, 32): the note value that gets one beat.
+- `N` (numerator) is a positive integer: the number of notated beats per bar.
+- `D` (denominator) is a positive integer that is a power of 2 (1, 2, 4, 8, 16, 32): the note value that gets one notated beat.
 
-The **beat duration** depends on the denominator:
-- Denominator 4: one beat = one quarter note (the common case)
-- Denominator 8: one beat = one eighth note
-- Denominator 2: one beat = one half note
+The time signature denominator defines the notated beat unit, but muq numeric timing fields are always measured in quarter-note units.
 
-For the purpose of this specification, all duration tokens (`w`, `h`, `q`, `e`, `s`) are defined relative to a quarter note, regardless of time signature denominator. The denominator only affects how many beats fill a bar.
+- **Notated beats per bar** = N
+- **Quarter-note units per bar** = N × (4 / D)
 
-**Beats per bar** = `N * (4 / D)` quarter-note beats.
+All duration tokens (`w`, `h`, `q`, `e`, `s`) and numeric `dur_beats` / `rest_beats` values are defined relative to a quarter note, regardless of time signature denominator. The formula N × (4 / D) converts from notated beats to the quarter-note units used for bar validation and MIDI tick computation.
+
+In this specification, `beats_per_bar` always refers to the quarter-note units per bar value.
 
 Examples:
-- `4/4` → 4 quarter-note beats per bar
-- `3/4` → 3 quarter-note beats per bar
-- `6/8` → 3 quarter-note beats per bar (6 × 4/8 = 3)
-- `7/8` → 3.5 quarter-note beats per bar
-- `5/4` → 5 quarter-note beats per bar
+- `4/4` → 4 quarter-note units per bar
+- `3/4` → 3 quarter-note units per bar
+- `6/8` → 3 quarter-note units per bar (6 × 4/8 = 3)
+- `7/8` → 3.5 quarter-note units per bar
+- `5/4` → 5 quarter-note units per bar
 
 ### 4.2 Scale Mode
 
@@ -94,6 +94,26 @@ When `key` is set and `scale_mode` is not `"off"`, validators check whether note
 Scale validation applies only to pitched note events, not drum events. Since patterns are pure musical data with no track binding, validators MUST resolve the arrangement to determine which patterns are assigned to drum tracks (channel 10) and skip scale validation for those events. Accidentals are evaluated after resolution (e.g. `F#4` in `G major` is in-scale).
 
 Scale validation operates on MIDI pitch classes. Enharmonically equivalent notes (e.g. `F#4` and `Gb4`, both MIDI note 66) are treated identically for scale membership. A note is in-scale if its pitch class (modulo 12) matches any degree of the declared scale, regardless of spelling.
+
+The following table defines the pitch-class intervals (semitones from tonic) for each mode:
+
+| Mode | Pitch-class intervals from tonic |
+|------|----------------------------------|
+| `major` | [0, 2, 4, 5, 7, 9, 11] |
+| `minor` | alias of `natural_minor` |
+| `natural_minor` | [0, 2, 3, 5, 7, 8, 10] |
+| `harmonic_minor` | [0, 2, 3, 5, 7, 8, 11] |
+| `melodic_minor` | [0, 2, 3, 5, 7, 9, 11] |
+| `dorian` | [0, 2, 3, 5, 7, 9, 10] |
+| `phrygian` | [0, 1, 3, 5, 7, 8, 10] |
+| `lydian` | [0, 2, 4, 6, 7, 9, 11] |
+| `mixolydian` | [0, 2, 4, 5, 7, 9, 10] |
+| `aeolian` | alias of `natural_minor` |
+| `locrian` | [0, 1, 3, 5, 6, 8, 10] |
+| `pentatonic` | [0, 2, 4, 7, 9] |
+| `minor_pentatonic` | [0, 3, 5, 7, 10] |
+| `blues` | [0, 3, 5, 6, 7, 10] |
+| `chromatic` | [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] |
 
 ## 5. `tracks` Object
 
@@ -251,7 +271,7 @@ Each tempo event is a mapping:
 |-----|------|----------|---------|-------------|
 | `bar` | integer | **yes** | — | Bar number within the section (1-indexed). |
 | `beat` | number | **yes** | — | Beat position within the bar (1-indexed). |
-| `tempo` | number | **yes** | — | Target tempo in BPM (1–999). |
+| `tempo` | number | **yes** | — | Target tempo in QPM (1–999). |
 | `interp` | string | no | `"step"` | Interpolation from the previous tempo to this value: `"step"` (instant) or `"linear"` (gradual ramp). |
 
 ```yaml
@@ -293,7 +313,7 @@ arrangement:
 
 The section-level `time` (or inherited `song.time`) sets the initial time signature. `meter_events` override it starting at the specified bar. All bars from that bar onward use the new time signature until the next `meter_event` or the end of the section.
 
-Meter events affect bar validation: `beats_per_bar` is recalculated at each meter change. A bar that falls under a 7/8 meter event has `beats_per_bar = 3.5` (7 × (4/8)).
+Meter events affect bar validation: `beats_per_bar` (quarter-note units per bar) is recalculated at each meter change. A bar that falls under a 7/8 meter event has `beats_per_bar = 3.5` (7 × (4/8)).
 
 Meter events, like tempo events, are **global** — they affect all tracks in the section. The `bar` value MUST NOT exceed the section's bar count.
 
@@ -539,18 +559,25 @@ If an event **has** a `beat` key, it is in **beat-addressed mode**. It starts at
 
 ### 11.3 Mixed Mode
 
-Sequential and beat-addressed events can coexist in the same bar. The rules are:
+Sequential and beat-addressed events **MUST NOT** be mixed for note and rest events within the same bar. A bar containing note or rest events MUST use either sequential positioning (no `beat` key on any note/rest) or beat-addressed positioning (`beat` key on every note/rest).
 
-1. Beat-addressed events are placed at their specified positions.
-2. Sequential events advance a cursor that starts at beat 1.
-3. When a sequential event follows one or more beat-addressed events, the cursor position is set to the end of the **last beat-addressed event in source order** (its beat + its duration). Source order, not time order, determines which event sets the cursor.
-4. When a beat-addressed event appears, it does NOT advance the sequential cursor — only explicit sequential events advance it.
+**Automation and text events are exempt** from this restriction. CC, pitch bend, aftertouch, and text events are always beat-addressed (§14.4) and may appear alongside sequential note/rest events without triggering `MIXED_BAR_POSITIONING`.
 
 ```yaml
-# Mixed: E4 is sequential after the beat-addressed chord
-- {beat: 1, note: [C4, E4, G4], dur: h}    # starts at beat 1, ends at beat 3
-- {note: E4, dur: e}                         # sequential: starts at beat 3
-- {note: F4, dur: e}                         # sequential: starts at beat 3.5
+# VALID: sequential notes with beat-addressed automation
+- - {note: C4, dur: q}
+  - {note: D4, dur: q}
+  - {beat: 1, cc: 64, value: 127}
+  - {beat: 3, cc: 64, value: 0}
+
+# VALID: all notes beat-addressed
+- - {beat: 1, note: C4, dur: h}
+  - {beat: 3, note: E4, dur: h}
+
+# INVALID (MIXED_BAR_POSITIONING): some notes have beat, some don't
+- - {beat: 1, note: [C4, E4, G4], dur: h}
+  - {note: E4, dur: e}
+  - {note: F4, dur: e}
 ```
 
 ### 11.4 Beat Validation
@@ -562,6 +589,10 @@ B + D <= beats_per_bar + 1
 ```
 
 For sequential bars, the total duration of all events SHOULD equal `beats_per_bar`. Validators MAY warn (not error) if the total is less than `beats_per_bar` (implied trailing rest) or error if greater.
+
+Bar-total validation SHOULD use a tolerance of ±0.001 quarter-note units to accommodate floating-point accumulation (e.g. triplet sequences). Token durations SHOULD be evaluated as exact rational values internally before conversion to ticks.
+
+If sequential event totals exceed `beats_per_bar + 0.001`, validators MUST emit `SEQUENTIAL_OVERFLOW`. If the total is within tolerance of `beats_per_bar`, no diagnostic is emitted. If the total is less than `beats_per_bar - 0.001`, validators MAY emit `BAR_DURATION_MISMATCH` as a warning.
 
 ### 11.5 Microtiming (Offset Beats)
 
@@ -634,6 +665,14 @@ A tie connects two consecutive notes of the same pitch, combining their duration
 
 The tied note and the following note MUST have the same pitch (or be chords with at least one common pitch). Validators SHOULD warn if pitches don't match.
 
+When `tie: true` appears on a chord, tie resolution is performed independently for each pitch in the chord:
+
+1. For each pitch P in the tied chord, if the next tie target contains P, P is sustained into that target.
+2. If the next tie target does not contain P, P ends at its written duration and validators SHOULD emit a `TIE_TARGET_MISSING_PITCH` warning.
+3. Pitches present only in the target chord start normally.
+
+A chord tie does not require every pitch in both chords to match.
+
 A tie at the end of a bar connects to the first matching event in the next bar of the same pattern.
 
 ### 13.1 Ties Across Section Boundaries
@@ -663,6 +702,8 @@ The optional `voice` key (integer) on note events provides explicit disambiguati
 ```
 
 When `voice` is present on a tied note, the tie resolves to the next note with **both** the same pitch **and** the same `voice` value. If no `voice` is set, the default pitch-matching behavior applies.
+
+In v1.0, `voice` is used **only** for tie disambiguation. It does not create an independent sequential cursor. Per-voice cursor semantics are reserved for a future spec version.
 
 Voice numbers are arbitrary integers. They have no inherent meaning beyond tie disambiguation within the same pattern. Converters MAY use voice numbers to separate polyphonic lines into distinct MIDI tracks or piano-roll lanes.
 
@@ -894,6 +935,9 @@ Rules:
 14. Indentation is 2 spaces.
 15. No trailing whitespace. File ends with a single newline.
 16. YAML comments (`#`) are **not preserved** by `muq fmt`. Authors who need persistent annotations should use `text` events with `type: marker` instead.
+17. Key signature tonic is uppercase with a single ASCII space before the mode: `C major`, `F# minor`, `Bb dorian`.
+
+Input parsers MAY accept lowercase tonics (e.g. `c major`) and normalize them to uppercase canonical form. Canonical form uses a single ASCII space between tonic and mode.
 
 ## 18. Error Classes
 
@@ -934,6 +978,7 @@ Implementations MUST detect and report the following error classes:
 | `EMPTY_PATTERN` | Pattern has zero bars. |
 | `MIXED_PITCH_NOTATION` | Pattern contains note events that do not match its declared `notation` style. |
 | `INVALID_NOTATION` | `notation` is not `"pitched"` or `"percussion"`. |
+| `MIXED_BAR_POSITIONING` | A bar contains note/rest events with both sequential and beat-addressed positioning. See §11.3. |
 
 ### 18.5 Event Errors
 
@@ -969,6 +1014,7 @@ Implementations MUST detect and report the following error classes:
 | `BEAT_OUT_OF_RANGE` | Beat position is less than 1 or exceeds beats per bar. |
 | `BEAT_OVERFLOW` | An event's beat + duration exceeds the bar boundary. |
 | `SEQUENTIAL_OVERFLOW` | Total duration of sequential events exceeds beats per bar. |
+| `BAR_DURATION_MISMATCH` | Total duration of sequential events is less than beats per bar minus tolerance (warning). |
 
 ### 18.7 Arrangement Errors
 
@@ -977,7 +1023,7 @@ Implementations MUST detect and report the following error classes:
 | `UNKNOWN_PATTERN` | Section references a pattern not defined in `patterns`. |
 | `UNKNOWN_TRACK_IN_SECTION` | Section `patterns` mapping references a track not defined in `tracks`. |
 | `INVALID_REPEAT` | Repeat count is not a positive integer. |
-| `INVALID_SECTION_TEMPO` | Section tempo override is not a valid BPM. |
+| `INVALID_SECTION_TEMPO` | Section tempo override is not a valid QPM value. |
 | `TEMPO_EVENT_OUT_OF_RANGE` | A `tempo_events` entry has a `bar` exceeding the section's bar count. |
 | `INVALID_TEMPO_EVENT` | A tempo event is missing required fields or has invalid values. |
 | `METER_EVENT_OUT_OF_RANGE` | A `meter_events` entry has a `bar` exceeding the section's bar count. |
@@ -985,6 +1031,18 @@ Implementations MUST detect and report the following error classes:
 | `TIE_ACROSS_NO_MATCH` | `tie_across` is true but the next section has no matching track/pitch (warning). |
 | `DRUM_MAP_NON_PERCUSSION` | Per-track `drum_map` is set on a non-percussion track (warning). |
 | `NOTATION_TRACK_MISMATCH` | A section binds a `notation: percussion` pattern to a non-percussion track, or a `notation: pitched` pattern to a percussion track (warning). |
+
+### 18.8 Key Errors
+
+| Error | Description |
+|-------|-------------|
+| `INVALID_KEY_SIGNATURE` | `key` string does not match the grammar `<tonic> <mode>` with a recognized tonic and mode. |
+
+### 18.9 Tie Errors
+
+| Error | Description |
+|-------|-------------|
+| `TIE_TARGET_MISSING_PITCH` | A chord tie has pitches that do not appear in the tie target (warning). |
 
 ## 19. Future Considerations
 
@@ -1287,40 +1345,70 @@ Default drum name → MIDI note mappings for channel 10.
 
 When converting to Standard MIDI File (SMF):
 - Use a resolution (PPQ — pulses per quarter note) of at least 480.
-- Beat positions convert to ticks: `ticks = beat_position * PPQ`.
-- Tempo is encoded as microseconds per quarter note: `µs_per_beat = 60_000_000 / BPM`.
+- Beat positions (1-indexed) convert to absolute ticks using the §11.6 formula:
+  ```
+  absolute_qbeats = bar_start_qbeats + (beat_position - 1)
+  actual_tick = round(absolute_qbeats × PPQ)
+  ```
+- Tempo is encoded as microseconds per quarter note: `µs_per_beat = 60_000_000 / QPM`.
 
 ### C.2 Track Mapping
 
 Each muq track maps to a separate MIDI track in a Type 1 MIDI file. The first MIDI track (track 0) contains tempo and time signature meta-events only.
 
-### C.3 Program Change
+### C.3 Track Initialization
 
-At the start of each MIDI track, emit a Program Change message on the track's channel with the GM program number from Appendix A.
+At the start of each MIDI track (tick 0), exporters SHOULD emit:
+- **Program Change** for the track's `instrument` (GM program number from Appendix A).
+- **CC7 (Channel Volume)** for the track's `volume`.
+- **CC10 (Pan)** for the track's `pan`.
+
+These initialization events follow the same-tick ordering table (§C.5). Channel 10 tracks do not require a Program Change (the GM standard kit is the default).
 
 ### C.4 Channel 10
 
 Channel 10 events use GM drum note mappings (Appendix B). No Program Change is needed for channel 10 (the GM standard kit is the default).
 
-### C.5 Microtiming
+### C.5 Same-Tick Event Ordering
 
-When an event has `offset_beats`, the actual MIDI tick position is:
+When multiple MIDI events share the same absolute tick, exporters MUST use the following deterministic ordering (lowest priority number first):
+
+| Priority | Event Type |
+|----------|-----------|
+| 1 | Tempo meta-events (FF 51) |
+| 2 | Time signature / key signature meta-events (FF 58, FF 59) |
+| 3 | Program Change / Bank Select |
+| 4 | CC events (control_change) |
+| 5 | Pitch Bend events |
+| 6 | Channel Aftertouch events |
+| 7 | Text / Lyric / Marker meta-events (FF 01, FF 05, FF 06) |
+| 8 | Note-off (note_off or note_on with velocity 0) |
+| 9 | Note-on |
+
+For same tick, same channel, same pitch: **note-off MUST precede note-on**. This avoids stuck or merged notes.
+
+When two events have the same ordering priority, exporters MUST preserve source order after arrangement expansion.
+
+### C.6 Microtiming
+
+When an event has `offset_beats`, the actual MIDI tick position follows the §11.6 timing layer formula:
 
 ```
-actual_tick = (beat_position + offset_beats) × PPQ
+absolute_qbeats = bar_start_qbeats + (beat_position - 1)
+actual_tick = round((absolute_qbeats + offset_beats) × PPQ)
 ```
 
-If the resulting tick is negative (the offset pulls the event before the start of the bar), converters SHOULD clamp to tick 0. The `offset_beats` value is independent of PPQ — converters apply the multiplication at export time.
+Converters MUST NOT clamp events that land before their containing bar if the resulting absolute song tick is non-negative. They MUST clamp only if `actual_tick < 0` (before the start of the song). The `offset_beats` value is independent of PPQ — converters apply the multiplication at export time.
 
-Example at 480 PPQ: an event at beat 1.5 with `offset_beats: 0.015625` produces `actual_tick = (1.5 + 0.015625) × 480 = 727.5`, which rounds to tick 728 (7.5 ticks late).
+Example at 480 PPQ: an event at beat 1.5 in a bar starting at qbeat 4.0, with `offset_beats: 0.015625`, produces `actual_tick = round((4.0 + 0.5 + 0.015625) × 480) = round(2167.5) = 2168`.
 
-### C.6 Meter Changes
+### C.7 Meter Changes
 
 Time signature meta-events (FF 58) are emitted on MIDI track 0 at the tick position corresponding to the start of the bar where the meter changes. The section-level `time` (or `song.time`) produces a time signature event at the section's start tick. Each `meter_events` entry produces an additional time signature event at the start of its bar.
 
-### C.7 Text Meta-Events
+### C.8 Text Meta-Events
 
-Text events are emitted on MIDI track 0 (or the associated track's MIDI track, at the converter's discretion) at the tick corresponding to `(beat_position + offset_beats) × PPQ`.
+Text events are emitted on MIDI track 0 (or the associated track's MIDI track, at the converter's discretion) at the tick position computed by the §11.6 / §C.6 formula (incorporating the 1-indexed beat offset and bar start position).
 
 | muq type | MIDI meta-event |
 |----------|----------------|

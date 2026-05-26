@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from muq.gm import (
@@ -11,6 +12,7 @@ from muq.gm import (
     beats_per_bar,
     gm_instrument_lookup,
     is_pitched_notation,
+    is_valid_key,
     parse_time_signature,
     pitch_to_midi,
     resolve_drum_name,
@@ -38,6 +40,7 @@ class Diagnostic:
 
 
 _VALID_TOP_LEVEL_KEYS = {"song", "tracks", "patterns", "arrangement", "drum_map"}
+_DRUM_MAP_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 def validate(doc: MuqDocument, *, raw: dict | None = None) -> list[Diagnostic]:
@@ -59,6 +62,15 @@ def validate(doc: MuqDocument, *, raw: dict | None = None) -> list[Diagnostic]:
     _validate_patterns(doc, diags)
     _validate_arrangement(doc, diags)
 
+    # Validate global drum_map key names (§16)
+    if doc.drum_map:
+        for dm_key in doc.drum_map:
+            if not _DRUM_MAP_KEY_RE.match(dm_key):
+                diags.append(Diagnostic(
+                    "INVALID_DRUM_MAP_KEY",
+                    f"drum_map key '{dm_key}' does not match [a-zA-Z_][a-zA-Z0-9_]*",
+                    path="drum_map"))
+
     return diags
 
 
@@ -74,6 +86,11 @@ def _validate_song(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 
     if s.scale_mode and s.scale_mode not in ("off", "warn", "strict"):
         diags.append(Diagnostic("INVALID_SCALE_MODE", f"Unknown scale_mode: {s.scale_mode}", path="song.scale_mode"))
+
+    if s.key is not None and not is_valid_key(s.key):
+        diags.append(Diagnostic("INVALID_KEY_SIGNATURE",
+                                f"Key '{s.key}' does not match grammar: <tonic> <mode>",
+                                path="song.key"))
 
 
 def _check_time_sig(time_str: str, path: str, diags: list[Diagnostic]) -> bool:
@@ -112,6 +129,15 @@ def _validate_tracks(doc: MuqDocument, diags: list[Diagnostic]) -> None:
             diags.append(Diagnostic("DRUM_MAP_NON_PERCUSSION",
                                     "drum_map set on non-percussion track",
                                     severity="warning", path=path))
+
+        # Validate drum_map key names (§16)
+        if track.drum_map:
+            for dm_key in track.drum_map:
+                if not _DRUM_MAP_KEY_RE.match(dm_key):
+                    diags.append(Diagnostic(
+                        "INVALID_DRUM_MAP_KEY",
+                        f"drum_map key '{dm_key}' does not match [a-zA-Z_][a-zA-Z0-9_]*",
+                        path=f"{path}.drum_map"))
 
         # §18 DRUM_CHANNEL_MISMATCH — only warn when percussion is auto-detected
         # (track.percussion is None), not when explicitly set to true.
@@ -161,6 +187,28 @@ def _check_pitch_notation_consistency(
                         path=path,
                     ))
                     return
+
+def _check_chord_ties(bar: list, bar_path: str, diags: list[Diagnostic]) -> None:
+    """Check chord ties for missing pitches in the target (§13)."""
+    note_events = [(i, e) for i, e in enumerate(bar) if isinstance(e, NoteEvent)]
+    for idx, (ei, event) in enumerate(note_events):
+        if not event.tie:
+            continue
+        pitches = event.note if isinstance(event.note, list) else [event.note]
+        if len(pitches) < 2:
+            continue  # single-note ties handled elsewhere
+        # Find the next note event in this bar
+        if idx + 1 >= len(note_events):
+            continue  # tie crosses bar boundary — checked by resolver
+        _next_ei, next_event = note_events[idx + 1]
+        next_pitches = next_event.note if isinstance(next_event.note, list) else [next_event.note]
+        next_set = {p.lower() for p in next_pitches}
+        for p in pitches:
+            if p.lower() not in next_set:
+                diags.append(Diagnostic(
+                    "TIE_TARGET_MISSING_PITCH",
+                    f"Tied pitch '{p}' not found in tie target",
+                    severity="warning", path=f"{bar_path}[{ei}]"))
 
 def _event_dur_beats(event) -> float:
     """Resolve an event's duration to beats. Returns 0.0 if unknown."""
@@ -229,6 +277,22 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
             bar_path = f"{path}.bars[{bi}]"
             bpb = pattern_bar_bpb.get((name, bi), beats_per_bar(doc.song.time))
             seq_total = 0.0
+
+            # §11.3 MIXED_BAR_POSITIONING — check note/rest events only
+            has_beat_note = False
+            has_seq_note = False
+            for event in bar:
+                if isinstance(event, (NoteEvent, RestEvent)):
+                    if getattr(event, "beat", None) is not None:
+                        has_beat_note = True
+                    else:
+                        has_seq_note = True
+            if has_beat_note and has_seq_note:
+                diags.append(Diagnostic(
+                    "MIXED_BAR_POSITIONING",
+                    "Bar mixes sequential and beat-addressed note/rest events",
+                    path=bar_path))
+
             for ei, event in enumerate(bar):
                 ev_path = f"{bar_path}[{ei}]"
                 _validate_event(event, ev_path, is_perc, per_track_map,
@@ -250,14 +314,24 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                             severity="warning", path=ev_path))
 
                 # §18.6 SEQUENTIAL_OVERFLOW — accumulate sequential durations
-                if beat is None:
+                if isinstance(event, (NoteEvent, RestEvent)) and beat is None:
                     seq_total += _event_dur_beats(event)
 
-            if seq_total > bpb:
+            # §11.4 tolerance-aware bar-total validation
+            _TOLERANCE = 0.001
+            if seq_total > bpb + _TOLERANCE:
                 diags.append(Diagnostic(
                     "SEQUENTIAL_OVERFLOW",
                     f"Sequential events total {seq_total} beats, exceeds bar ({bpb} beats)",
                     severity="warning", path=bar_path))
+            elif seq_total > 0 and seq_total < bpb - _TOLERANCE:
+                diags.append(Diagnostic(
+                    "BAR_DURATION_MISMATCH",
+                    f"Sequential events total {seq_total} beats, less than bar ({bpb} beats)",
+                    severity="warning", path=bar_path))
+
+            # §13 TIE_TARGET_MISSING_PITCH — chord tie pitch coverage
+            _check_chord_ties(bar, bar_path, diags)
 
         # Scale validation (§4.4) — only for pitched patterns
         if (not is_perc
