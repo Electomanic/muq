@@ -7,15 +7,18 @@ from dataclasses import dataclass, field
 
 from muq.gm import (
     GM_DRUM_MAP,
-    DURATION_TOKENS,
-    ARTICULATIONS,
-    beats_per_bar,
     gm_instrument_lookup,
+    resolve_drum_name,
+)
+from muq.theory import (
+    ARTICULATIONS,
+    DURATION_TOKENS,
+    event_dur_beats,
+    beats_per_bar,
     is_pitched_notation,
     is_valid_key,
     parse_time_signature,
     pitch_to_midi,
-    resolve_drum_name,
     scale_pitch_classes,
 )
 from muq.model import (
@@ -210,22 +213,11 @@ def _check_chord_ties(bar: list, bar_path: str, diags: list[Diagnostic]) -> None
                     f"Tied pitch '{p}' not found in tie target",
                     severity="warning", path=f"{bar_path}[{ei}]"))
 
-def _event_dur_beats(event) -> float:
-    """Resolve an event's duration to beats. Returns 0.0 if unknown."""
-    if isinstance(event, NoteEvent):
-        if event.dur_beats is not None:
-            return event.dur_beats
-        if event.dur and event.dur in DURATION_TOKENS:
-            return DURATION_TOKENS[event.dur]
-    elif isinstance(event, RestEvent):
-        if event.rest_beats is not None:
-            return event.rest_beats
-        if event.rest and event.rest in DURATION_TOKENS:
-            return DURATION_TOKENS[event.rest]
-    return 0.0
+# _event_dur_beats is now event_dur_beats() in gm.py
 
 
 def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
+    _TOLERANCE = 0.001
     # Determine which patterns are used by which tracks
     pattern_to_tracks: dict[str, set[str]] = {}
     for section in doc.arrangement:
@@ -300,14 +292,14 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                 # §18.6 BEAT_OUT_OF_RANGE
                 beat = getattr(event, "beat", None)
                 if beat is not None:
-                    if beat < 1 or beat > bpb:
+                    if beat < 1 or beat >= bpb + 1:
                         diags.append(Diagnostic(
                             "BEAT_OUT_OF_RANGE",
-                            f"beat {beat} out of range 1..{bpb}",
+                            f"beat {beat} outside bar ({bpb}-beat bar)",
                             severity="warning", path=ev_path))
                     # §11.4 beat + duration overflow
-                    dur = _event_dur_beats(event)
-                    if dur > 0 and beat + dur > bpb + 1:
+                    dur = event_dur_beats(event)
+                    if dur > 0 and beat + dur > bpb + 1 + _TOLERANCE:
                         diags.append(Diagnostic(
                             "BEAT_OVERFLOW",
                             f"beat {beat} + duration {dur} exceeds bar ({bpb} beats)",
@@ -315,10 +307,9 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 
                 # §18.6 SEQUENTIAL_OVERFLOW — accumulate sequential durations
                 if isinstance(event, (NoteEvent, RestEvent)) and beat is None:
-                    seq_total += _event_dur_beats(event)
+                    seq_total += event_dur_beats(event)
 
             # §11.4 tolerance-aware bar-total validation
-            _TOLERANCE = 0.001
             if seq_total > bpb + _TOLERANCE:
                 diags.append(Diagnostic(
                     "SEQUENTIAL_OVERFLOW",

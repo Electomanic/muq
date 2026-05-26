@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
 from io import StringIO
-from typing import Any
 
-import yaml
-
-
+from muq.theory import is_pitched_notation
 from muq.model import (
     AftertouchEvent,
     CCEvent,
@@ -50,11 +46,12 @@ def fmt(doc: MuqDocument) -> str:
 
 
 def _normalize_key(key: str) -> str:
-    """Normalize key to canonical form: uppercase tonic, single space."""
+    """Normalize key to canonical form: uppercase tonic, single space, lowercase mode."""
     parts = key.split()
     if len(parts) >= 2:
         tonic = parts[0][0].upper() + parts[0][1:]
-        return f"{tonic} {parts[1]}"
+        mode = parts[1].lower()
+        return f"{tonic} {mode}"
     return key
 
 
@@ -258,7 +255,6 @@ def _pitch_canonical(p: str) -> str:
     if not p:
         return p
     # Check if it's a pitched notation (letter + optional accidental + octave)
-    from muq.gm import is_pitched_notation
     if is_pitched_notation(p):
         return p[0].upper() + p[1:]
     # Drum name → lowercase
@@ -277,6 +273,7 @@ def _yaml_scalar(v) -> str:
     if isinstance(v, str):
         # Quote if contains special chars or looks like a number
         if any(c in v for c in ":{}[],&*?|>!%@`'\"#\n") or v != v.strip():
-            return f'"{v}"'
+            escaped = v.replace('\\', '\\\\').replace('"', '\\"')
+            return f'"{escaped}"'
         return v
     return str(v)

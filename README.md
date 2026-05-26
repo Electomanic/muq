@@ -49,8 +49,17 @@ uv sync
 # Validate a .muq file
 uv run muq validate song.muq
 
+# Show song info
+uv run muq info song.muq
+
 # Export to MIDI
-uv run muq midi song.muq -o song.mid
+uv run muq export song song.muq -o song.mid
+
+# Export individual tracks as stems
+uv run muq export track song.muq -o stems/
+
+# Export patterns as clips
+uv run muq export pattern song.muq -o clips/
 
 # Format to canonical form
 uv run muq fmt song.muq
