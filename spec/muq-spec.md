@@ -95,6 +95,26 @@ Scale validation applies only to pitched note events, not drum events. Since pat
 
 Scale validation operates on MIDI pitch classes. Enharmonically equivalent notes (e.g. `F#4` and `Gb4`, both MIDI note 66) are treated identically for scale membership. A note is in-scale if its pitch class (modulo 12) matches any degree of the declared scale, regardless of spelling.
 
+The following table defines the pitch-class intervals (semitones from tonic) for each mode:
+
+| Mode | Pitch-class intervals from tonic |
+|------|----------------------------------|
+| `major` | [0, 2, 4, 5, 7, 9, 11] |
+| `minor` | alias of `natural_minor` |
+| `natural_minor` | [0, 2, 3, 5, 7, 8, 10] |
+| `harmonic_minor` | [0, 2, 3, 5, 7, 8, 11] |
+| `melodic_minor` | [0, 2, 3, 5, 7, 9, 11] |
+| `dorian` | [0, 2, 3, 5, 7, 9, 10] |
+| `phrygian` | [0, 1, 3, 5, 7, 8, 10] |
+| `lydian` | [0, 2, 4, 6, 7, 9, 11] |
+| `mixolydian` | [0, 2, 4, 5, 7, 9, 10] |
+| `aeolian` | alias of `natural_minor` |
+| `locrian` | [0, 1, 3, 5, 6, 8, 10] |
+| `pentatonic` | [0, 2, 4, 7, 9] |
+| `minor_pentatonic` | [0, 3, 5, 7, 10] |
+| `blues` | [0, 3, 5, 6, 7, 10] |
+| `chromatic` | [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] |
+
 ## 5. `tracks` Object
 
 The `tracks` mapping defines named instrument channels. Each key is a unique track name (a YAML string matching `[a-zA-Z_][a-zA-Z0-9_]*`). Each value is a track definition mapping.
@@ -648,7 +668,7 @@ The tied note and the following note MUST have the same pitch (or be chords with
 When `tie: true` appears on a chord, tie resolution is performed independently for each pitch in the chord:
 
 1. For each pitch P in the tied chord, if the next tie target contains P, P is sustained into that target.
-2. If the next tie target does not contain P, P ends at its written duration and validators SHOULD emit an `AMBIGUOUS_TIE` warning.
+2. If the next tie target does not contain P, P ends at its written duration and validators SHOULD emit a `TIE_TARGET_MISSING_PITCH` warning.
 3. Pitches present only in the target chord start normally.
 
 A chord tie does not require every pitch in both chords to match.
@@ -915,6 +935,9 @@ Rules:
 14. Indentation is 2 spaces.
 15. No trailing whitespace. File ends with a single newline.
 16. YAML comments (`#`) are **not preserved** by `muq fmt`. Authors who need persistent annotations should use `text` events with `type: marker` instead.
+17. Key signature tonic is uppercase with a single ASCII space before the mode: `C major`, `F# minor`, `Bb dorian`.
+
+Input parsers MAY accept lowercase tonics (e.g. `c major`) and normalize them to uppercase canonical form. Canonical form uses a single ASCII space between tonic and mode.
 
 ## 18. Error Classes
 
@@ -993,6 +1016,22 @@ Implementations MUST detect and report the following error classes:
 | `SEQUENTIAL_OVERFLOW` | Total duration of sequential events exceeds beats per bar. |
 | `BAR_DURATION_MISMATCH` | Total duration of sequential events is less than beats per bar minus tolerance (warning). |
 
+### 18.7 Arrangement Errors
+
+| Error | Description |
+|-------|-------------|
+| `UNKNOWN_PATTERN` | Section references a pattern not defined in `patterns`. |
+| `UNKNOWN_TRACK_IN_SECTION` | Section `patterns` mapping references a track not defined in `tracks`. |
+| `INVALID_REPEAT` | Repeat count is not a positive integer. |
+| `INVALID_SECTION_TEMPO` | Section tempo override is not a valid QPM value. |
+| `TEMPO_EVENT_OUT_OF_RANGE` | A `tempo_events` entry has a `bar` exceeding the section's bar count. |
+| `INVALID_TEMPO_EVENT` | A tempo event is missing required fields or has invalid values. |
+| `METER_EVENT_OUT_OF_RANGE` | A `meter_events` entry has a `bar` exceeding the section's bar count. |
+| `INVALID_METER_EVENT` | A meter event is missing required fields or has an invalid time signature. |
+| `TIE_ACROSS_NO_MATCH` | `tie_across` is true but the next section has no matching track/pitch (warning). |
+| `DRUM_MAP_NON_PERCUSSION` | Per-track `drum_map` is set on a non-percussion track (warning). |
+| `NOTATION_TRACK_MISMATCH` | A section binds a `notation: percussion` pattern to a non-percussion track, or a `notation: pitched` pattern to a percussion track (warning). |
+
 ### 18.8 Key Errors
 
 | Error | Description |
@@ -1003,23 +1042,7 @@ Implementations MUST detect and report the following error classes:
 
 | Error | Description |
 |-------|-------------|
-| `AMBIGUOUS_TIE` | A chord tie has pitches that do not appear in the tie target (warning). |
-
-### 18.7 Arrangement Errors
-
-| Error | Description |
-|-------|-------------|
-| `UNKNOWN_PATTERN` | Section references a pattern not defined in `patterns`. |
-| `UNKNOWN_TRACK_IN_SECTION` | Section `patterns` mapping references a track not defined in `tracks`. |
-| `INVALID_REPEAT` | Repeat count is not a positive integer. |
-| `INVALID_SECTION_TEMPO` | Section tempo override is not a valid BPM. |
-| `TEMPO_EVENT_OUT_OF_RANGE` | A `tempo_events` entry has a `bar` exceeding the section's bar count. |
-| `INVALID_TEMPO_EVENT` | A tempo event is missing required fields or has invalid values. |
-| `METER_EVENT_OUT_OF_RANGE` | A `meter_events` entry has a `bar` exceeding the section's bar count. |
-| `INVALID_METER_EVENT` | A meter event is missing required fields or has an invalid time signature. |
-| `TIE_ACROSS_NO_MATCH` | `tie_across` is true but the next section has no matching track/pitch (warning). |
-| `DRUM_MAP_NON_PERCUSSION` | Per-track `drum_map` is set on a non-percussion track (warning). |
-| `NOTATION_TRACK_MISMATCH` | A section binds a `notation: percussion` pattern to a non-percussion track, or a `notation: pitched` pattern to a percussion track (warning). |
+| `TIE_TARGET_MISSING_PITCH` | A chord tie has pitches that do not appear in the tie target (warning). |
 
 ## 19. Future Considerations
 
@@ -1333,9 +1356,14 @@ When converting to Standard MIDI File (SMF):
 
 Each muq track maps to a separate MIDI track in a Type 1 MIDI file. The first MIDI track (track 0) contains tempo and time signature meta-events only.
 
-### C.3 Program Change
+### C.3 Track Initialization
 
-At the start of each MIDI track, emit a Program Change message on the track's channel with the GM program number from Appendix A.
+At the start of each MIDI track (tick 0), exporters SHOULD emit:
+- **Program Change** for the track's `instrument` (GM program number from Appendix A).
+- **CC7 (Channel Volume)** for the track's `volume`.
+- **CC10 (Pan)** for the track's `pan`.
+
+These initialization events follow the same-tick ordering table (§C.5). Channel 10 tracks do not require a Program Change (the GM standard kit is the default).
 
 ### C.4 Channel 10
 
