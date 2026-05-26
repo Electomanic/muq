@@ -2,6 +2,7 @@
 
 **Version:** 1.0.0-draft
 **Date:** 2026-05-26
+**License:** [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 
 ## 1. Overview
 

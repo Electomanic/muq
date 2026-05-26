@@ -2,6 +2,8 @@
 name = "muq"
 version = "0.1.0"
 description = "Parser, validator, and MIDI exporter for the muq music format"
+readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
     "pyyaml>=6.0",
