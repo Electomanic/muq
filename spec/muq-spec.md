@@ -64,24 +64,24 @@ The `song` mapping contains metadata about the composition.
 ### 4.1 Time Signature
 
 The `time` value is a string of the form `N/D` where:
-- `N` (numerator) is a positive integer: the number of beats per bar.
-- `D` (denominator) is a positive integer that is a power of 2 (1, 2, 4, 8, 16, 32): the note value that gets one beat.
+- `N` (numerator) is a positive integer: the number of notated beats per bar.
+- `D` (denominator) is a positive integer that is a power of 2 (1, 2, 4, 8, 16, 32): the note value that gets one notated beat.
 
-The **beat duration** depends on the denominator:
-- Denominator 4: one beat = one quarter note (the common case)
-- Denominator 8: one beat = one eighth note
-- Denominator 2: one beat = one half note
+The time signature denominator defines the notated beat unit, but muq numeric timing fields are always measured in quarter-note units.
 
-For the purpose of this specification, all duration tokens (`w`, `h`, `q`, `e`, `s`) are defined relative to a quarter note, regardless of time signature denominator. The denominator only affects how many beats fill a bar.
+- **Notated beats per bar** = N
+- **Quarter-note units per bar** = N × (4 / D)
 
-**Beats per bar** = `N * (4 / D)` quarter-note beats.
+All duration tokens (`w`, `h`, `q`, `e`, `s`) and numeric `dur_beats` / `rest_beats` values are defined relative to a quarter note, regardless of time signature denominator. The formula N × (4 / D) converts from notated beats to the quarter-note units used for bar validation and MIDI tick computation.
+
+In this specification, `beats_per_bar` always refers to the quarter-note units per bar value.
 
 Examples:
-- `4/4` → 4 quarter-note beats per bar
-- `3/4` → 3 quarter-note beats per bar
-- `6/8` → 3 quarter-note beats per bar (6 × 4/8 = 3)
-- `7/8` → 3.5 quarter-note beats per bar
-- `5/4` → 5 quarter-note beats per bar
+- `4/4` → 4 quarter-note units per bar
+- `3/4` → 3 quarter-note units per bar
+- `6/8` → 3 quarter-note units per bar (6 × 4/8 = 3)
+- `7/8` → 3.5 quarter-note units per bar
+- `5/4` → 5 quarter-note units per bar
 
 ### 4.2 Scale Mode
 
@@ -293,7 +293,7 @@ arrangement:
 
 The section-level `time` (or inherited `song.time`) sets the initial time signature. `meter_events` override it starting at the specified bar. All bars from that bar onward use the new time signature until the next `meter_event` or the end of the section.
 
-Meter events affect bar validation: `beats_per_bar` is recalculated at each meter change. A bar that falls under a 7/8 meter event has `beats_per_bar = 3.5` (7 × (4/8)).
+Meter events affect bar validation: `beats_per_bar` (quarter-note units per bar) is recalculated at each meter change. A bar that falls under a 7/8 meter event has `beats_per_bar = 3.5` (7 × (4/8)).
 
 Meter events, like tempo events, are **global** — they affect all tracks in the section. The `bar` value MUST NOT exceed the section's bar count.
 
@@ -1322,8 +1322,12 @@ Default drum name → MIDI note mappings for channel 10.
 
 When converting to Standard MIDI File (SMF):
 - Use a resolution (PPQ — pulses per quarter note) of at least 480.
-- Beat positions convert to ticks: `ticks = beat_position * PPQ`.
-- Tempo is encoded as microseconds per quarter note: `µs_per_beat = 60_000_000 / BPM`.
+- Beat positions (1-indexed) convert to absolute ticks using the §11.6 formula:
+  ```
+  absolute_qbeats = bar_start_qbeats + (beat_position - 1)
+  actual_tick = round(absolute_qbeats × PPQ)
+  ```
+- Tempo is encoded as microseconds per quarter note: `µs_per_beat = 60_000_000 / QPM`.
 
 ### C.2 Track Mapping
 
@@ -1359,15 +1363,16 @@ When two events have the same ordering priority, exporters MUST preserve source 
 
 ### C.6 Microtiming
 
-When an event has `offset_beats`, the actual MIDI tick position is:
+When an event has `offset_beats`, the actual MIDI tick position follows the §11.6 timing layer formula:
 
 ```
-actual_tick = (beat_position + offset_beats) × PPQ
+absolute_qbeats = bar_start_qbeats + (beat_position - 1)
+actual_tick = round((absolute_qbeats + offset_beats) × PPQ)
 ```
 
-If the resulting tick is negative (the offset pulls the event before the start of the bar), converters SHOULD clamp to tick 0. The `offset_beats` value is independent of PPQ — converters apply the multiplication at export time.
+Converters MUST NOT clamp events that land before their containing bar if the resulting absolute song tick is non-negative. They MUST clamp only if `actual_tick < 0` (before the start of the song). The `offset_beats` value is independent of PPQ — converters apply the multiplication at export time.
 
-Example at 480 PPQ: an event at beat 1.5 with `offset_beats: 0.015625` produces `actual_tick = (1.5 + 0.015625) × 480 = 727.5`, which rounds to tick 728 (7.5 ticks late).
+Example at 480 PPQ: an event at beat 1.5 in a bar starting at qbeat 4.0, with `offset_beats: 0.015625`, produces `actual_tick = round((4.0 + 0.5 + 0.015625) × 480) = round(2167.5) = 2168`.
 
 ### C.7 Meter Changes
 
@@ -1375,7 +1380,7 @@ Time signature meta-events (FF 58) are emitted on MIDI track 0 at the tick posit
 
 ### C.8 Text Meta-Events
 
-Text events are emitted on MIDI track 0 (or the associated track's MIDI track, at the converter's discretion) at the tick corresponding to `(beat_position + offset_beats) × PPQ`.
+Text events are emitted on MIDI track 0 (or the associated track's MIDI track, at the converter's discretion) at the tick position computed by the §11.6 / §C.6 formula (incorporating the 1-indexed beat offset and bar start position).
 
 | muq type | MIDI meta-event |
 |----------|----------------|
