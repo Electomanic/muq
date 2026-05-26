@@ -235,7 +235,7 @@ arrangement:
 
 ### 7.1 Section Length
 
-When multiple patterns are activated in a section, they SHOULD have the same number of bars. If pattern lengths differ, shorter patterns are padded with silent bars to match the longest.
+When multiple patterns are activated in a section, they SHOULD have the same number of bars. If pattern lengths differ, shorter patterns loop from their first bar to fill the section length determined by the longest pattern. For example, a 1-bar drum pattern in a 2-bar section plays its single bar twice.
 
 ### 7.2 Arrangement Expansion
 

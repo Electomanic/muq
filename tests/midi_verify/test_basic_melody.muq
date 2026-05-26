@@ -1,0 +1,27 @@
+# test_basic_melody.muq — Verify basic pitched note output.
+# Tests: single track, sequential notes, known pitches/velocities/durations.
+# Expected MIDI: C4 q, D4 e, E4 e, F4 h, G4 w across 2 bars at 120 bpm 4/4.
+
+song:
+  title: Basic Melody Test
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  scale:
+    bars:
+      - - {note: C4, dur: q, vel: 80}
+        - {note: D4, dur: e, vel: 70}
+        - {note: E4, dur: e, vel: 70}
+        - {note: F4, dur: h, vel: 90}
+      - - {note: G4, dur: w, vel: 100}
+
+arrangement:
+  - name: main
+    patterns:
+      piano: scale

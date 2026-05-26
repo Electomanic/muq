@@ -1,0 +1,38 @@
+# test_tempo_time.muq — Verify tempo changes and time signature changes.
+# Tests: section-level tempo override, section-level time signature change.
+# Expected MIDI: starts 120 bpm 4/4, changes to 140 bpm 3/4 in second section.
+
+song:
+  title: Tempo and Time Test
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  four_four_bar:
+    bars:
+      - - {note: C4, dur: q, vel: 80}
+        - {note: D4, dur: q, vel: 80}
+        - {note: E4, dur: q, vel: 80}
+        - {note: F4, dur: q, vel: 80}
+
+  three_four_bar:
+    bars:
+      - - {note: G4, dur: q, vel: 80}
+        - {note: A4, dur: q, vel: 80}
+        - {note: B4, dur: q, vel: 80}
+
+arrangement:
+  - name: "Section A (4/4 at 120)"
+    patterns:
+      piano: four_four_bar
+
+  - name: "Section B (3/4 at 140)"
+    tempo: 140
+    time: 3/4
+    patterns:
+      piano: three_four_bar

@@ -1,0 +1,35 @@
+# test_basic_drums.muq — Verify drum note mapping and beat placement.
+# Tests: percussion track, beat-addressed events, GM drum names.
+# Expected MIDI: kick on 1,3; snare on 2,4; hh on every 8th; all in ch 10.
+
+song:
+  title: Basic Drums Test
+  tempo: 100
+  time: 4/4
+
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+
+patterns:
+  basic_beat:
+    notation: percussion
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 100}
+        - {beat: 1, note: hh, dur: e, vel: 80}
+        - {beat: 1.5, note: hh, dur: e, vel: 60}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 2, note: hh, dur: e, vel: 80}
+        - {beat: 2.5, note: hh, dur: e, vel: 60}
+        - {beat: 3, note: kick, dur: q, vel: 100}
+        - {beat: 3, note: hh, dur: e, vel: 80}
+        - {beat: 3.5, note: hh, dur: e, vel: 60}
+        - {beat: 4, note: snare, dur: q, vel: 100}
+        - {beat: 4, note: hh, dur: e, vel: 80}
+        - {beat: 4.5, note: hh, dur: e, vel: 60}
+
+arrangement:
+  - name: main
+    patterns:
+      drums: basic_beat

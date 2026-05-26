@@ -120,8 +120,11 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
 
                 bar_beat_pos = rep_beat_cursor
                 effective_time = active_time
+                pat_bars = pattern.bars
+                pat_len = len(pat_bars)
 
-                for bi, bar in enumerate(pattern.bars):
+                for bi in range(max_bars):
+                    bar = pat_bars[bi % pat_len]
                     bar_num = bi + 1
                     if bar_num in meter_map:
                         effective_time = meter_map[bar_num]

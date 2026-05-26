@@ -1,0 +1,27 @@
+# test_repeat.muq — Verify section repeat and pattern looping with repeat.
+# Tests: 1-bar pattern repeated 3 times via section repeat.
+# Expected MIDI: same notes at beats 0-4, 4-8, 8-12.
+
+song:
+  title: Repeat Test
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  riff:
+    bars:
+      - - {note: C4, dur: q, vel: 80}
+        - {note: E4, dur: q, vel: 80}
+        - {note: G4, dur: q, vel: 80}
+        - {note: C5, dur: q, vel: 80}
+
+arrangement:
+  - name: main
+    repeat: 3
+    patterns:
+      piano: riff
