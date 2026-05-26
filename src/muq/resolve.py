@@ -68,7 +68,7 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
 
     # Initial tempo and time sig
     num, denom = parse_time_signature(current_time)
-    tempos.append(ResolvedTempo(tick=0, tempo_bpm=current_tempo))
+    tempos.append(ResolvedTempo(tick=0, tempo_qpm=current_tempo))
     time_sigs.append(ResolvedTimeSig(tick=0, numerator=num, denominator=denom))
 
     prev_tie_across = False
@@ -93,7 +93,7 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
             current_tempo = section_tempo
             tempos.append(ResolvedTempo(
                 tick=round(song_beat_cursor * ppq),
-                tempo_bpm=current_tempo,
+                tempo_qpm=current_tempo,
             ))
 
         if section_time != current_time:
@@ -120,7 +120,7 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
                 te_beat = rep_beat_cursor + bar_beats_before + (te.beat - 1)
                 tempos.append(ResolvedTempo(
                     tick=round(te_beat * ppq),
-                    tempo_bpm=te.tempo,
+                    tempo_qpm=te.tempo,
                 ))
 
             # Determine bar count from longest pattern in section
@@ -128,6 +128,23 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
             for tname, pname in section.patterns.items():
                 if pname in doc.patterns:
                     max_bars = max(max_bars, len(doc.patterns[pname].bars))
+
+            # Emit meter events once per repetition (not per track)
+            _bar_pos = rep_beat_cursor
+            _eff_time = active_time
+            for bi in range(max_bars):
+                bar_num = bi + 1
+                if bar_num in meter_map:
+                    _eff_time = meter_map[bar_num]
+                    n, d = parse_time_signature(_eff_time)
+                    time_sigs.append(ResolvedTimeSig(
+                        tick=round(_bar_pos * ppq),
+                        numerator=n, denominator=d,
+                    ))
+                if bi == 0 and section.pickup_beats is not None:
+                    _bar_pos += section.pickup_beats
+                else:
+                    _bar_pos += beats_per_bar(_eff_time)
 
             # Process each track's pattern
             for tname, pname in section.patterns.items():
@@ -147,11 +164,6 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
                     bar_num = bi + 1
                     if bar_num in meter_map:
                         effective_time = meter_map[bar_num]
-                        n, d = parse_time_signature(effective_time)
-                        time_sigs.append(ResolvedTimeSig(
-                            tick=round(bar_beat_pos * ppq),
-                            numerator=n, denominator=d,
-                        ))
 
                     # First bar shortened for pickup (anacrusis)
                     if bi == 0 and section.pickup_beats is not None:
@@ -202,6 +214,10 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
             texts=accum.texts,
         ))
 
+    # Deduplicate tempo/time-sig events (last-wins at same tick)
+    tempos = _dedupe_by_tick(tempos)
+    time_sigs = _dedupe_by_tick(time_sigs)
+
     return ResolvedSong(
         ppq=ppq,
         tempos=tempos,
@@ -240,7 +256,7 @@ def resolve_pattern(
     time = doc.song.time
     num, denom = parse_time_signature(time)
 
-    tempos = [ResolvedTempo(tick=0, tempo_bpm=tempo)]
+    tempos = [ResolvedTempo(tick=0, tempo_qpm=tempo)]
     time_sigs = [ResolvedTimeSig(tick=0, numerator=num, denominator=denom)]
 
     # Walk bars
@@ -297,6 +313,14 @@ class _TrackAccum:
         self.texts: list[ResolvedText] = []
         # Pending ties: (midi_note, voice) → ResolvedNote being extended
         self.pending_ties: dict[tuple[int, int | None], ResolvedNote] = {}
+
+
+def _dedupe_by_tick(events: list) -> list:
+    """Deduplicate events by tick, keeping the last event at each tick."""
+    by_tick: dict[int, object] = {}
+    for e in events:
+        by_tick[e.tick] = e
+    return sorted(by_tick.values(), key=lambda e: e.tick)
 
 
 def _clamp_same_pitch_overlaps(notes: list[ResolvedNote]) -> None:

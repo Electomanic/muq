@@ -229,7 +229,7 @@ class TestResolve:
         resolved = resolve(doc, ppq=480)
         assert resolved.ppq == 480
         assert len(resolved.tempos) >= 1
-        assert resolved.tempos[0].tempo_bpm == 120
+        assert resolved.tempos[0].tempo_qpm == 120
         assert len(resolved.tracks) == 1
         # One whole note
         track = resolved.tracks[0]
@@ -339,7 +339,7 @@ class TestClipExport:
     def test_clip_has_tempo_and_time_sig(self):
         doc = parse(EXAMPLES_DIR / "minimal.muq")
         resolved = resolve_pattern(doc, "melody")
-        assert resolved.tempos[0].tempo_bpm == 120
+        assert resolved.tempos[0].tempo_qpm == 120
         assert resolved.time_signatures[0].numerator == 4
         assert resolved.time_signatures[0].denominator == 4
 
@@ -407,3 +407,245 @@ class TestFmt:
         doc2 = parse(output1)
         output2 = fmt(doc2)
         assert output1 == output2
+
+    def test_yaml_reserved_words_roundtrip(self):
+        """Titles like 'false', 'null', 'yes' must survive fmt round-trip."""
+        for title in ("false", "null", "yes", "no", "true", "off", "on"):
+            yaml_str = f"""
+song:
+  title: "{title}"
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  p:
+    bars:
+    - [{{note: C4, dur: q}}]
+arrangement:
+  - name: main
+    patterns:
+      piano: p
+"""
+            doc = parse(yaml_str)
+            output = fmt(doc)
+            doc2 = parse(output)
+            assert doc2.song.title == title, f"Title '{title}' did not round-trip"
+
+
+# ---------------------------------------------------------------------------
+# Regression tests (review items)
+# ---------------------------------------------------------------------------
+
+class TestRegressions:
+    def test_mixed_positioning_is_error(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  mixed:
+    bars:
+    - [{note: C4, dur: q}, {beat: 3, note: E4, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      piano: mixed
+"""
+        doc = parse(yaml_str)
+        diags = validate(doc)
+        codes = [d.code for d in diags]
+        assert "MIXED_BAR_POSITIONING" in codes
+
+    def test_beat_1_exports_at_tick_0(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  p:
+    bars:
+    - [{beat: 1, note: C4, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      piano: p
+"""
+        doc = parse(yaml_str)
+        resolved = resolve(doc, ppq=480)
+        assert resolved.tracks[0].notes[0].tick == 0
+
+    def test_sequential_overflow_is_error(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  overflow:
+    bars:
+    - [{note: C4, dur: w}, {note: D4, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      piano: overflow
+"""
+        doc = parse(yaml_str)
+        diags = validate(doc)
+        seq = [d for d in diags if d.code == "SEQUENTIAL_OVERFLOW"]
+        assert len(seq) == 1
+        assert seq[0].severity == "error"
+
+    def test_6_8_validates_as_3_quarter_units(self):
+        assert beats_per_bar("6/8") == 3.0
+
+    def test_same_tick_note_off_before_note_on(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  p:
+    bars:
+    - [{note: C4, dur: q}, {note: C4, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      piano: p
+"""
+        doc = parse(yaml_str)
+        resolved = resolve(doc, ppq=480)
+        mid = to_midi(resolved)
+        # Find same-tick events on the instrument track
+        track = mid.tracks[1]
+        tick = 0
+        events_at_tick: dict[int, list] = {}
+        for msg in track:
+            tick += msg.time
+            events_at_tick.setdefault(tick, []).append(msg)
+        # At tick 480 (beat 2), note_off should precede note_on
+        at_480 = events_at_tick.get(480, [])
+        types = [m.type for m in at_480 if hasattr(m, 'type') and m.type in ('note_on', 'note_off')]
+        assert types == ["note_off", "note_on"]
+
+    def test_scale_validation_catches_out_of_key(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+  key: C major
+  scale_mode: warn
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  p:
+    bars:
+    - [{note: F#4, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      piano: p
+"""
+        doc = parse(yaml_str)
+        diags = validate(doc)
+        codes = [d.code for d in diags]
+        assert "OUT_OF_SCALE" in codes
+
+    def test_pattern_reuse_pitched_and_percussion(self):
+        """Same pattern bound to pitched + percussion track validates per binding."""
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+  drums:
+    instrument: standard
+    channel: 10
+    percussion: true
+patterns:
+  shared:
+    bars:
+    - [{note: C4, dur: q}]
+arrangement:
+  - name: sec1
+    patterns:
+      piano: shared
+  - name: sec2
+    patterns:
+      drums: shared
+"""
+        doc = parse(yaml_str)
+        diags = validate(doc)
+        # Should validate C4 as pitched for piano (valid) AND as drum for drums (unknown)
+        codes = [d.code for d in diags]
+        # Piano binding: C4 is a valid pitched note, no error
+        # Drums binding: C4 is not a known drum name → UNKNOWN_DRUM_NAME
+        assert "UNKNOWN_DRUM_NAME" in codes
+        # Also expect NOTATION_TRACK_MISMATCH for drums binding
+        assert "NOTATION_TRACK_MISMATCH" in codes
+
+    def test_meter_events_emit_once_not_per_track(self):
+        """Meter events should not be duplicated per track."""
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+  bass:
+    instrument: acoustic_bass
+    channel: 2
+patterns:
+  p1:
+    bars:
+    - [{note: C4, dur: q}]
+    - [{note: D4, dur: q}]
+  p2:
+    bars:
+    - [{note: E2, dur: q}]
+    - [{note: F2, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      piano: p1
+      bass: p2
+    meter_events:
+      - {bar: 2, time: "3/4"}
+"""
+        doc = parse(yaml_str)
+        resolved = resolve(doc, ppq=480)
+        # Should have exactly 2 time sigs: initial 4/4 + one 3/4 change
+        assert len(resolved.time_signatures) == 2
+        assert resolved.time_signatures[0].numerator == 4
+        assert resolved.time_signatures[1].numerator == 3
+
+    def test_fmt_yaml_reserved_scalars_quoted(self):
+        """Formatter must quote YAML boolean/null-like scalars."""
+        from muq.fmt import _yaml_scalar
+        for word in ("true", "false", "null", "yes", "no", "on", "off"):
+            result = _yaml_scalar(word)
+            assert result.startswith('"'), f"'{word}' should be quoted, got: {result}"

@@ -218,11 +218,6 @@ def _check_chord_ties(bar: list, bar_path: str, diags: list[Diagnostic]) -> None
 
 def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
     _TOLERANCE = 0.001
-    # Determine which patterns are used by which tracks
-    pattern_to_tracks: dict[str, set[str]] = {}
-    for section in doc.arrangement:
-        for track_name, pat_name in section.patterns.items():
-            pattern_to_tracks.setdefault(pat_name, set()).add(track_name)
 
     # Build per-bar effective bpb from meter_events across all sections
     # that reference each pattern.  Maps (pattern_name, bar_index) → bpb.
@@ -247,6 +242,7 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                 if key not in pattern_bar_bpb or bpb_val < pattern_bar_bpb[key]:
                     pattern_bar_bpb[key] = bpb_val
 
+    # Phase 1: Per-pattern structural/timing validation
     for name, pattern in doc.patterns.items():
         path = f"patterns.{name}"
         if not pattern.bars:
@@ -255,15 +251,6 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 
         # Check pitch notation consistency (§6.2)
         _check_pitch_notation_consistency(pattern, path, diags)
-
-        track_names = pattern_to_tracks.get(name, set())
-        tracks = [doc.tracks[tn] for tn in track_names if tn in doc.tracks]
-        is_perc = any(t.is_percussion for t in tracks)
-        per_track_map = None
-        for t in tracks:
-            if t.drum_map:
-                per_track_map = t.drum_map
-                break
 
         for bi, bar in enumerate(pattern.bars):
             bar_path = f"{path}.bars[{bi}]"
@@ -287,8 +274,7 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 
             for ei, event in enumerate(bar):
                 ev_path = f"{bar_path}[{ei}]"
-                _validate_event(event, ev_path, is_perc, per_track_map,
-                                doc.drum_map, doc.song, diags)
+                _validate_event(event, ev_path, doc.song, diags)
                 # §18.6 BEAT_OUT_OF_RANGE
                 beat = getattr(event, "beat", None)
                 if beat is not None:
@@ -303,7 +289,7 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                         diags.append(Diagnostic(
                             "BEAT_OVERFLOW",
                             f"beat {beat} + duration {dur} exceeds bar ({bpb} beats)",
-                            severity="warning", path=ev_path))
+                            severity="error", path=ev_path))
 
                 # §18.6 SEQUENTIAL_OVERFLOW — accumulate sequential durations
                 if isinstance(event, (NoteEvent, RestEvent)) and beat is None:
@@ -314,7 +300,7 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                 diags.append(Diagnostic(
                     "SEQUENTIAL_OVERFLOW",
                     f"Sequential events total {seq_total} beats, exceeds bar ({bpb} beats)",
-                    severity="warning", path=bar_path))
+                    severity="error", path=bar_path))
             elif seq_total > 0 and seq_total < bpb - _TOLERANCE:
                 diags.append(Diagnostic(
                     "BAR_DURATION_MISMATCH",
@@ -324,15 +310,38 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
             # §13 TIE_TARGET_MISSING_PITCH — chord tie pitch coverage
             _check_chord_ties(bar, bar_path, diags)
 
-        # Scale validation (§4.4) — only for pitched patterns
-        if (not is_perc
-                and pattern.notation == "pitched"
-                and doc.song.key
-                and doc.song.scale_mode in ("warn", "strict")):
-            pcs = scale_pitch_classes(doc.song.key)
-            if pcs is not None:
-                severity = "error" if doc.song.scale_mode == "strict" else "warning"
-                _check_scale(pattern, pcs, severity, path, diags)
+    # Phase 2: Per-binding semantic validation (pitch + scale)
+    validated_bindings: set[tuple[str, str]] = set()
+    for section in doc.arrangement:
+        for track_name, pat_name in section.patterns.items():
+            binding_key = (track_name, pat_name)
+            if binding_key in validated_bindings:
+                continue
+            validated_bindings.add(binding_key)
+            if track_name not in doc.tracks or pat_name not in doc.patterns:
+                continue
+            track = doc.tracks[track_name]
+            pattern = doc.patterns[pat_name]
+            is_perc = track.is_percussion
+            per_track_map = track.drum_map if track.drum_map else None
+            path = f"patterns.{pat_name}"
+
+            for bi, bar in enumerate(pattern.bars):
+                for ei, event in enumerate(bar):
+                    if isinstance(event, NoteEvent):
+                        _validate_note_pitches(
+                            event, f"{path}.bars[{bi}][{ei}]",
+                            is_perc, per_track_map, doc.drum_map, diags)
+
+            # Scale validation (§4.4) — only for pitched bindings
+            if (not is_perc
+                    and pattern.notation == "pitched"
+                    and doc.song.key
+                    and doc.song.scale_mode in ("warn", "strict")):
+                pcs = scale_pitch_classes(doc.song.key)
+                if pcs is not None:
+                    severity = "error" if doc.song.scale_mode == "strict" else "warning"
+                    _check_scale(pattern, pcs, severity, path, diags)
 
 
 def _check_scale(
@@ -368,20 +377,14 @@ def _check_scale(
 def _validate_event(
     event: NoteEvent | RestEvent | CCEvent | PitchBendEvent | AftertouchEvent | TextEvent,
     path: str,
-    is_percussion: bool,
-    per_track_map: dict[str, int] | None,
-    global_map: dict[str, int] | None,
     song,
     diags: list[Diagnostic],
 ) -> None:
+    """Track-independent event validation: durations, ranges, formats."""
     if isinstance(event, NoteEvent):
-        _validate_note_event(event, path, is_percussion, per_track_map, global_map, song, diags)
-        # §18.5 NOTE_AND_REST_CONFLICT — also check note + rest/rest_beats coexistence
-        # (schema blocks this at parse time, but check for programmatic construction)
-        # Voice check
+        _validate_note_event(event, path, song, diags)
         if event.voice is not None and not isinstance(event.voice, int):
             diags.append(Diagnostic("INVALID_VOICE", f"voice must be an integer", path=path))
-        # Offset beats check
         if event.offset_beats != 0 and not isinstance(event.offset_beats, (int, float)):
             diags.append(Diagnostic("INVALID_OFFSET_BEATS", f"offset_beats must be a number", path=path))
     elif isinstance(event, RestEvent):
@@ -427,12 +430,10 @@ def _validate_event(
 def _validate_note_event(
     event: NoteEvent,
     path: str,
-    is_percussion: bool,
-    per_track_map: dict[str, int] | None,
-    global_map: dict[str, int] | None,
     song,
     diags: list[Diagnostic],
 ) -> None:
+    """Track-independent note validation: duration, velocity, articulation."""
     # Duration
     if event.dur is None and event.dur_beats is None:
         diags.append(Diagnostic("MISSING_DURATION", "Note has no dur or dur_beats", path=path))
@@ -453,7 +454,16 @@ def _validate_note_event(
         diags.append(Diagnostic("INVALID_ARTICULATION",
                                 f"Unknown articulation: {event.articulation}", path=path))
 
-    # Pitch(es)
+
+def _validate_note_pitches(
+    event: NoteEvent,
+    path: str,
+    is_percussion: bool,
+    per_track_map: dict[str, int] | None,
+    global_map: dict[str, int] | None,
+    diags: list[Diagnostic],
+) -> None:
+    """Track-dependent pitch validation: resolve against drum map or pitched notation."""
     notes = event.note if isinstance(event.note, list) else [event.note]
     for pitch_str in notes:
         if is_percussion:
@@ -535,7 +545,7 @@ def _validate_arrangement(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                                         path=f"{path}.tempo_events"))
             if not (1 <= te.tempo <= 999):
                 diags.append(Diagnostic("INVALID_TEMPO_EVENT",
-                                        f"Tempo event has invalid BPM: {te.tempo}",
+                                        f"Tempo event has invalid QPM: {te.tempo}",
                                         path=f"{path}.tempo_events"))
 
         for me in section.meter_events:

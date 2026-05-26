@@ -43,7 +43,7 @@ class ResolvedAftertouch:
 @dataclass
 class ResolvedTempo:
     tick: int
-    tempo_bpm: float
+    tempo_qpm: float
 
 
 @dataclass

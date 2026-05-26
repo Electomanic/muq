@@ -50,7 +50,7 @@ def _normalize_key(key: str) -> str:
     parts = key.split()
     if len(parts) >= 2:
         tonic = parts[0][0].upper() + parts[0][1:]
-        mode = parts[1].lower()
+        mode = "_".join(parts[1:]).lower()
         return f"{tonic} {mode}"
     return key
 
@@ -268,11 +268,21 @@ def _num(v) -> str:
     return str(v)
 
 
+# YAML 1.1 boolean/null-like words that must be quoted to round-trip safely.
+_YAML_RESERVED = {
+    "true", "false", "yes", "no", "on", "off", "null", "~",
+    "True", "False", "Yes", "No", "On", "Off", "Null",
+    "TRUE", "FALSE", "YES", "NO", "ON", "OFF", "NULL",
+}
+
+
 def _yaml_scalar(v) -> str:
     """Format a scalar for inline YAML. Quote strings that need it."""
     if isinstance(v, str):
         # Quote if contains special chars or looks like a number
-        if any(c in v for c in ":{}[],&*?|>!%@`'\"#\n") or v != v.strip():
+        if (any(c in v for c in ":{}[],&*?|>!%@`'\"#\n")
+                or v != v.strip()
+                or v in _YAML_RESERVED):
             escaped = v.replace('\\', '\\\\').replace('"', '\\"')
             return f'"{escaped}"'
         return v
