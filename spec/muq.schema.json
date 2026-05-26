@@ -34,7 +34,7 @@
           "type": "number",
           "minimum": 1,
           "maximum": 999,
-          "description": "Tempo in BPM."
+          "description": "Tempo in QPM (quarter notes per minute)."
         },
         "time": {
           "type": "string",
@@ -43,7 +43,8 @@
         },
         "key": {
           "type": "string",
-          "description": "Key signature, e.g. 'C major', 'F# minor'. Informational unless scale_mode is set."
+          "pattern": "^[A-Ga-g](#{1,2}|b{1,2})?\\s+(major|minor|natural_minor|harmonic_minor|melodic_minor|dorian|phrygian|lydian|mixolydian|aeolian|locrian|pentatonic|minor_pentatonic|blues|chromatic)$",
+          "description": "Key signature as '<tonic> <mode>', e.g. 'C major', 'F# minor', 'Bb dorian'. Informational unless scale_mode is set."
         },
         "scale_mode": {
           "type": "string",
@@ -395,7 +396,7 @@
           "type": "number",
           "minimum": 1,
           "maximum": 999,
-          "description": "Tempo override for this section (BPM)."
+          "description": "Tempo override for this section in QPM."
         },
         "tie_across": {
           "type": "boolean",
@@ -441,7 +442,7 @@
           "type": "number",
           "minimum": 1,
           "maximum": 999,
-          "description": "Target tempo in BPM."
+          "description": "Target tempo in QPM (1-999)."
         },
         "interp": {
           "type": "string",
