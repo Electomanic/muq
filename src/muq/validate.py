@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from muq.gm import (
@@ -39,6 +40,7 @@ class Diagnostic:
 
 
 _VALID_TOP_LEVEL_KEYS = {"song", "tracks", "patterns", "arrangement", "drum_map"}
+_DRUM_MAP_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 def validate(doc: MuqDocument, *, raw: dict | None = None) -> list[Diagnostic]:
@@ -59,6 +61,15 @@ def validate(doc: MuqDocument, *, raw: dict | None = None) -> list[Diagnostic]:
     _validate_tracks(doc, diags)
     _validate_patterns(doc, diags)
     _validate_arrangement(doc, diags)
+
+    # Validate global drum_map key names (§16)
+    if doc.drum_map:
+        for dm_key in doc.drum_map:
+            if not _DRUM_MAP_KEY_RE.match(dm_key):
+                diags.append(Diagnostic(
+                    "INVALID_DRUM_MAP_KEY",
+                    f"drum_map key '{dm_key}' does not match [a-zA-Z_][a-zA-Z0-9_]*",
+                    path="drum_map"))
 
     return diags
 
@@ -119,6 +130,15 @@ def _validate_tracks(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                                     "drum_map set on non-percussion track",
                                     severity="warning", path=path))
 
+        # Validate drum_map key names (§16)
+        if track.drum_map:
+            for dm_key in track.drum_map:
+                if not _DRUM_MAP_KEY_RE.match(dm_key):
+                    diags.append(Diagnostic(
+                        "INVALID_DRUM_MAP_KEY",
+                        f"drum_map key '{dm_key}' does not match [a-zA-Z_][a-zA-Z0-9_]*",
+                        path=f"{path}.drum_map"))
+
         # §18 DRUM_CHANNEL_MISMATCH — only warn when percussion is auto-detected
         # (track.percussion is None), not when explicitly set to true.
         if is_perc and track.channel != 10 and track.percussion is None:
@@ -167,6 +187,28 @@ def _check_pitch_notation_consistency(
                         path=path,
                     ))
                     return
+
+def _check_chord_ties(bar: list, bar_path: str, diags: list[Diagnostic]) -> None:
+    """Check chord ties for missing pitches in the target (§13)."""
+    note_events = [(i, e) for i, e in enumerate(bar) if isinstance(e, NoteEvent)]
+    for idx, (ei, event) in enumerate(note_events):
+        if not event.tie:
+            continue
+        pitches = event.note if isinstance(event.note, list) else [event.note]
+        if len(pitches) < 2:
+            continue  # single-note ties handled elsewhere
+        # Find the next note event in this bar
+        if idx + 1 >= len(note_events):
+            continue  # tie crosses bar boundary — checked by resolver
+        _next_ei, next_event = note_events[idx + 1]
+        next_pitches = next_event.note if isinstance(next_event.note, list) else [next_event.note]
+        next_set = {p.lower() for p in next_pitches}
+        for p in pitches:
+            if p.lower() not in next_set:
+                diags.append(Diagnostic(
+                    "TIE_TARGET_MISSING_PITCH",
+                    f"Tied pitch '{p}' not found in tie target",
+                    severity="warning", path=f"{bar_path}[{ei}]"))
 
 def _event_dur_beats(event) -> float:
     """Resolve an event's duration to beats. Returns 0.0 if unknown."""
@@ -287,6 +329,9 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                     "BAR_DURATION_MISMATCH",
                     f"Sequential events total {seq_total} beats, less than bar ({bpb} beats)",
                     severity="warning", path=bar_path))
+
+            # §13 TIE_TARGET_MISSING_PITCH — chord tie pitch coverage
+            _check_chord_ties(bar, bar_path, diags)
 
         # Scale validation (§4.4) — only for pitched patterns
         if (not is_perc

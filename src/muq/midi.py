@@ -102,6 +102,8 @@ def _event_sort_priority(msg) -> int:
         return 7
     if isinstance(msg, mido.Message):
         t = msg.type
+        if t == "program_change":
+            return 3
         if t == "control_change":
             return 4
         if t == "pitchwheel":

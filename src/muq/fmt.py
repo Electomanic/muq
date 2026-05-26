@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+
 from muq.model import (
     AftertouchEvent,
     CCEvent,
@@ -48,6 +49,15 @@ def fmt(doc: MuqDocument) -> str:
     return out.getvalue()
 
 
+def _normalize_key(key: str) -> str:
+    """Normalize key to canonical form: uppercase tonic, single space."""
+    parts = key.split()
+    if len(parts) >= 2:
+        tonic = parts[0][0].upper() + parts[0][1:]
+        return f"{tonic} {parts[1]}"
+    return key
+
+
 def _write_song(out: StringIO, doc: MuqDocument) -> None:
     s = doc.song
     if s.title is not None:
@@ -57,7 +67,7 @@ def _write_song(out: StringIO, doc: MuqDocument) -> None:
     out.write(f"  tempo: {_num(s.tempo)}\n")
     out.write(f"  time: \"{s.time}\"\n")
     if s.key is not None:
-        out.write(f"  key: {_yaml_scalar(s.key)}\n")
+        out.write(f"  key: {_yaml_scalar(_normalize_key(s.key))}\n")
     if s.scale_mode is not None:
         out.write(f"  scale_mode: {s.scale_mode}\n")
     if s.spec_version != "1.0.0":
