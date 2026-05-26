@@ -24,12 +24,21 @@ from muq.model import (
     Track,
 )
 
-_SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "spec" / "muq.schema.json"
+# Schema lives in spec/ for development, but is bundled alongside the
+# package for installed wheels (see pyproject.toml data includes).
+_SCHEMA_PATH = Path(__file__).resolve().parent / "muq.schema.json"
+if not _SCHEMA_PATH.exists():
+    _SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "spec" / "muq.schema.json"
+
+_SCHEMA_CACHE: dict | None = None
 
 
 def _load_schema() -> dict:
-    with open(_SCHEMA_PATH) as f:
-        return json.load(f)
+    global _SCHEMA_CACHE
+    if _SCHEMA_CACHE is None:
+        with open(_SCHEMA_PATH) as f:
+            _SCHEMA_CACHE = json.load(f)
+    return _SCHEMA_CACHE
 
 
 def _parse_event(d: dict) -> (

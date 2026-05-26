@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import math
 import warnings
+from collections import defaultdict
 
 from muq.gm import (
-    ARTICULATIONS,
-    DURATION_TOKENS,
     gm_instrument_lookup,
+    resolve_drum_name,
+    resolve_pan,
+)
+from muq.theory import (
+    ARTICULATIONS,
+    event_dur_beats,
     beats_per_bar,
     parse_time_signature,
     pitch_to_midi,
-    resolve_drum_name,
-    resolve_pan,
 )
 from muq.ir import (
     ResolvedAftertouch,
@@ -33,7 +36,9 @@ from muq.model import (
     NoteEvent,
     PitchBendEvent,
     RestEvent,
+    Section,
     TextEvent,
+    Track,
 )
 
 
@@ -173,6 +178,16 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
     # Build final resolved tracks
     tracks_out = []
     for tname, accum in resolved_tracks.items():
+        # Warn about unterminated ties at end of song
+        if accum.pending_ties:
+            for (midi_note, voice), rn in accum.pending_ties.items():
+                warnings.warn(
+                    f"TIE_ACROSS_NO_MATCH: unterminated tie at end of song "
+                    f"on track '{accum.name}' note {midi_note}",
+                    stacklevel=2,
+                )
+            accum.pending_ties.clear()
+
         _clamp_same_pitch_overlaps(accum.notes)
         tracks_out.append(ResolvedTrack(
             name=accum.name,
@@ -209,7 +224,6 @@ def resolve_pattern(
     is_perc = pattern.notation == "percussion"
 
     # Build a minimal track-like context for _resolve_bar
-    from muq.model import Track
     if is_perc:
         dummy_track = Track(instrument="standard", channel=10, percussion=True)
     else:
@@ -296,7 +310,6 @@ def _clamp_same_pitch_overlaps(notes: list[ResolvedNote]) -> None:
         return
 
     # Group by (channel, midi_note)
-    from collections import defaultdict
     by_pitch: dict[tuple[int, int], list[ResolvedNote]] = defaultdict(list)
     for n in notes:
         by_pitch[(n.channel, n.midi_note)].append(n)
@@ -313,20 +326,7 @@ def _clamp_same_pitch_overlaps(notes: list[ResolvedNote]) -> None:
                 a.duration_ticks = max(1, b.tick - a.tick - 1)
 
 
-def _event_dur_beats(event: NoteEvent | RestEvent) -> float:
-    """Get the duration in beats from a note or rest event."""
-    if isinstance(event, NoteEvent):
-        if event.dur:
-            return DURATION_TOKENS[event.dur]
-        if event.dur_beats is not None:
-            return event.dur_beats
-        return 0.0  # tie continuation without explicit dur
-    # RestEvent
-    if event.rest:
-        return DURATION_TOKENS[event.rest]
-    if event.rest_beats is not None:
-        return event.rest_beats
-    return 0.0
+# _event_dur_beats is now event_dur_beats() in theory.py
 
 
 def _apply_swing(base_beat: float, swing: int) -> float:
@@ -339,9 +339,23 @@ def _apply_swing(base_beat: float, swing: int) -> float:
         return base_beat
     # Check if this beat is on an off-beat eighth (fractional part == 0.5)
     frac = base_beat - math.floor(base_beat)
-    if abs(frac - 0.5) < 1e-9:
+    if abs(frac - 0.5) < 1e-6:
         return math.floor(base_beat) + swing / 100.0
     return base_beat
+
+
+def _control_tick(
+    event: CCEvent | PitchBendEvent | AftertouchEvent | TextEvent,
+    bar_start_beats: float,
+    swing: int,
+    ppq: int,
+) -> int:
+    """Compute the absolute tick for a beat-addressed control/text event."""
+    base_pos = event.beat if event.beat is not None else 1.0
+    swung = _apply_swing(base_pos, swing)
+    final_pos = swung + event.offset_beats
+    abs_beats = bar_start_beats + (final_pos - 1)
+    return max(0, round(abs_beats * ppq))
 
 
 def _resolve_bar(
@@ -349,7 +363,7 @@ def _resolve_bar(
     bar_start_beats: float,
     bpb: float,
     swing: int,
-    track,
+    track: Track,
     doc: MuqDocument,
     ppq: int,
     accum: _TrackAccum,
@@ -359,7 +373,7 @@ def _resolve_bar(
 
     for event in bar:
         if isinstance(event, NoteEvent):
-            dur_beats = _event_dur_beats(event)
+            dur_beats = event_dur_beats(event)
 
             # Determine base position
             if event.beat is not None:
@@ -386,7 +400,7 @@ def _resolve_bar(
                     vel_add = v
 
             velocity = max(1, min(127, event.vel + vel_add))
-            dur_ticks = round(dur_beats * gate * ppq)
+            dur_ticks = max(1, round(dur_beats * gate * ppq))
 
             # Resolve pitches
             notes_list = event.note if isinstance(event.note, list) else [event.note]
@@ -423,18 +437,14 @@ def _resolve_bar(
                         accum.pending_ties[tie_key] = note
 
         elif isinstance(event, RestEvent):
-            dur_beats = _event_dur_beats(event)
+            dur_beats = event_dur_beats(event)
             if event.beat is not None:
                 pass  # beat-addressed rest: no cursor advancement
             else:
                 cursor += dur_beats
 
         elif isinstance(event, CCEvent):
-            base_pos = event.beat if event.beat is not None else 1.0
-            swung = _apply_swing(base_pos, swing)
-            final_pos = swung + event.offset_beats
-            abs_beats = bar_start_beats + (final_pos - 1)
-            tick = max(0, round(abs_beats * ppq))
+            tick = _control_tick(event, bar_start_beats, swing, ppq)
             accum.ccs.append(ResolvedCC(
                 tick=tick, channel=accum.channel,
                 cc=event.cc, value=event.value,
@@ -442,11 +452,7 @@ def _resolve_bar(
             ))
 
         elif isinstance(event, PitchBendEvent):
-            base_pos = event.beat if event.beat is not None else 1.0
-            swung = _apply_swing(base_pos, swing)
-            final_pos = swung + event.offset_beats
-            abs_beats = bar_start_beats + (final_pos - 1)
-            tick = max(0, round(abs_beats * ppq))
+            tick = _control_tick(event, bar_start_beats, swing, ppq)
             accum.pitch_bends.append(ResolvedPitchBend(
                 tick=tick, channel=accum.channel,
                 value=event.pitch_bend,
@@ -454,11 +460,7 @@ def _resolve_bar(
             ))
 
         elif isinstance(event, AftertouchEvent):
-            base_pos = event.beat if event.beat is not None else 1.0
-            swung = _apply_swing(base_pos, swing)
-            final_pos = swung + event.offset_beats
-            abs_beats = bar_start_beats + (final_pos - 1)
-            tick = max(0, round(abs_beats * ppq))
+            tick = _control_tick(event, bar_start_beats, swing, ppq)
             accum.aftertouches.append(ResolvedAftertouch(
                 tick=tick, channel=accum.channel,
                 value=event.aftertouch,
@@ -466,11 +468,7 @@ def _resolve_bar(
             ))
 
         elif isinstance(event, TextEvent):
-            base_pos = event.beat if event.beat is not None else 1.0
-            swung = _apply_swing(base_pos, swing)
-            final_pos = swung + event.offset_beats
-            abs_beats = bar_start_beats + (final_pos - 1)
-            tick = max(0, round(abs_beats * ppq))
+            tick = _control_tick(event, bar_start_beats, swing, ppq)
             accum.texts.append(ResolvedText(
                 tick=tick, text=event.text, type=event.type,
             ))
@@ -480,7 +478,7 @@ def _beats_before_bar(
     bar_num: int,
     base_time: str,
     meter_map: dict[int, str],
-    section,
+    section: Section,
     doc: MuqDocument,
 ) -> float:
     """Compute the cumulative beats before a given bar number in a section."""
@@ -500,7 +498,7 @@ def _section_total_beats(
     base_time: str,
     meter_map: dict[int, str],
     max_bars: int,
-    section,
+    section: Section,
     doc: MuqDocument,
 ) -> float:
     """Compute total beats across all bars in one repetition of a section."""

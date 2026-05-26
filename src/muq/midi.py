@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from pathlib import Path
+from typing import Callable
 
 import mido
 
@@ -181,29 +183,22 @@ def _expand_cc_automation(
     messages: list,
 ) -> None:
     """Emit CC messages, expanding interp=linear into intermediate steps."""
-    from muq.ir import ResolvedCC
     step_ticks = max(1, ppq // _RAMP_DIVISOR)
 
-    # Group by CC number to find previous values
-    by_cc: dict[int, list[ResolvedCC]] = {}
+    # Group by CC number — each CC lane has its own interpolation state
+    by_cc: dict[int, list] = defaultdict(list)
     for c in ccs:
-        by_cc.setdefault(c.cc, []).append(c)
+        by_cc[c.cc].append(c)
 
     for cc_num, events in by_cc.items():
         events.sort(key=lambda e: e.tick)
-        prev_val = 0  # default starting value per spec §14.5
-        prev_tick = 0
-        for ev in events:
-            if ev.interp == "linear" and ev.tick > prev_tick:
-                for t, v in _lerp_steps(prev_tick, ev.tick, prev_val, ev.value, step_ticks):
-                    messages.append((t, mido.Message(
-                        "control_change", channel=channel,
-                        control=cc_num, value=max(0, min(127, v)), time=0)))
-            messages.append((ev.tick, mido.Message(
+        _expand_automation_lane(
+            events, step_ticks, (0, 127),
+            lambda v, cc=cc_num: mido.Message(
                 "control_change", channel=channel,
-                control=cc_num, value=ev.value, time=0)))
-            prev_val = ev.value
-            prev_tick = ev.tick
+                control=cc, value=v, time=0),
+            messages,
+        )
 
 
 def _expand_pb_automation(
@@ -213,23 +208,14 @@ def _expand_pb_automation(
     messages: list,
 ) -> None:
     """Emit pitch bend messages, expanding interp=linear into intermediate steps."""
-    from muq.ir import ResolvedPitchBend
     step_ticks = max(1, ppq // _RAMP_DIVISOR)
-
-    sorted_pbs: list[ResolvedPitchBend] = sorted(pbs, key=lambda e: e.tick)
-    prev_val = 0  # center
-    prev_tick = 0
-    for ev in sorted_pbs:
-        if ev.interp == "linear" and ev.tick > prev_tick:
-            for t, v in _lerp_steps(prev_tick, ev.tick, prev_val, ev.value, step_ticks):
-                messages.append((t, mido.Message(
-                    "pitchwheel", channel=channel,
-                    pitch=max(-8192, min(8191, v)), time=0)))
-        messages.append((ev.tick, mido.Message(
-            "pitchwheel", channel=channel,
-            pitch=ev.value, time=0)))
-        prev_val = ev.value
-        prev_tick = ev.tick
+    sorted_pbs = sorted(pbs, key=lambda e: e.tick)
+    _expand_automation_lane(
+        sorted_pbs, step_ticks, (-8192, 8191),
+        lambda v: mido.Message(
+            "pitchwheel", channel=channel, pitch=v, time=0),
+        messages,
+    )
 
 
 def _expand_at_automation(
@@ -239,20 +225,37 @@ def _expand_at_automation(
     messages: list,
 ) -> None:
     """Emit aftertouch messages, expanding interp=linear into intermediate steps."""
-    from muq.ir import ResolvedAftertouch
     step_ticks = max(1, ppq // _RAMP_DIVISOR)
+    sorted_ats = sorted(ats, key=lambda e: e.tick)
+    _expand_automation_lane(
+        sorted_ats, step_ticks, (0, 127),
+        lambda v: mido.Message(
+            "aftertouch", channel=channel, value=v, time=0),
+        messages,
+    )
 
-    sorted_ats: list[ResolvedAftertouch] = sorted(ats, key=lambda e: e.tick)
+
+def _expand_automation_lane(
+    events: list,
+    step_ticks: int,
+    clamp: tuple[int, int],
+    make_msg: Callable[[int], mido.Message],
+    messages: list[tuple[int, mido.Message]],
+) -> None:
+    """Walk a sorted event lane, emitting messages with linear interpolation.
+
+    Each event must have .tick, .value, and .interp attributes.
+    ``make_msg(value)`` constructs the MIDI message for a given value.
+    """
+    lo, hi = clamp
     prev_val = 0
     prev_tick = 0
-    for ev in sorted_ats:
+    for ev in events:
         if ev.interp == "linear" and ev.tick > prev_tick:
-            for t, v in _lerp_steps(prev_tick, ev.tick, prev_val, ev.value, step_ticks):
-                messages.append((t, mido.Message(
-                    "aftertouch", channel=channel,
-                    value=max(0, min(127, v)), time=0)))
-        messages.append((ev.tick, mido.Message(
-            "aftertouch", channel=channel,
-            value=ev.value, time=0)))
+            for t, v in _lerp_steps(
+                prev_tick, ev.tick, prev_val, ev.value, step_ticks
+            ):
+                messages.append((t, make_msg(max(lo, min(hi, v)))))
+        messages.append((ev.tick, make_msg(ev.value)))
         prev_val = ev.value
         prev_tick = ev.tick
