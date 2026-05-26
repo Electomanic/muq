@@ -1,0 +1,20 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  text_test:
+    bars:
+      - - {beat: 1, text: "Verse 1", type: marker}
+        - {beat: 1, text: "Cmaj7", type: chord}
+        - {beat: 1, text: "Hel-", type: lyric}
+        - {beat: 1, note: C4, dur: h}
+        - {beat: 3, text: "-lo", type: lyric}
+        - {beat: 3, note: E4, dur: h}
+arrangement:
+  - name: test
+    patterns:
+      piano: text_test

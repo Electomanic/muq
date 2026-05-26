@@ -285,6 +285,34 @@ arrangement:
         # Bass should play normally across 2 bars
         assert len(bass_track.notes) == 2
 
+    def test_same_pitch_overlap_clamped(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+patterns:
+  overlap:
+    notation: percussion
+    bars:
+      - - {beat: 1, note: hh, dur: q, vel: 80}
+        - {beat: 1.5, note: hh, dur: q, vel: 60}
+arrangement:
+  - name: main
+    patterns:
+      drums: overlap
+"""
+        doc = parse(yaml_str)
+        resolved = resolve(doc, ppq=480)
+        notes = resolved.tracks[0].notes
+        assert len(notes) == 2
+        # First note should be clamped: ends 1 tick before second starts
+        a, b = notes[0], notes[1]
+        assert a.tick + a.duration_ticks < b.tick
+
 
 # ---------------------------------------------------------------------------
 # Clip export (resolve_pattern)

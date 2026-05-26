@@ -133,7 +133,7 @@ class Song:
     artist: str | None = None
     key: str | None = None
     scale_mode: str | None = None
-    version: str | None = None
+    spec_version: str = "1.0.0"
 
 
 @dataclass

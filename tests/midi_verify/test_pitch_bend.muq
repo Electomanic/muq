@@ -1,0 +1,19 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  lead:
+    instrument: distortion_guitar
+    channel: 1
+patterns:
+  bend_test:
+    bars:
+      - - {beat: 1, note: E4, dur: w, vel: 100}
+        - {beat: 1, pitch_bend: 0}
+        - {beat: 2, pitch_bend: 4096}
+        - {beat: 3, pitch_bend: 8191}
+        - {beat: 4, pitch_bend: 0}
+arrangement:
+  - name: test
+    patterns:
+      lead: bend_test

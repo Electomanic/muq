@@ -1,0 +1,23 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+patterns:
+  groove:
+    notation: percussion
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 100}
+        - {beat: 1, note: hh, dur: e, vel: 70, offset_beats: 0.015625}
+        - {beat: 2, note: hh, dur: e, vel: 50, offset_beats: -0.01}
+        - {beat: 2.5, note: hh, dur: e, vel: 60}
+        - {beat: 3, note: snare, dur: q, vel: 95}
+        - {beat: 3, note: hh, dur: e, vel: 70, offset_beats: 0.015625}
+        - {beat: 4, note: hh, dur: e, vel: 50, offset_beats: -0.01}
+        - {beat: 4.5, note: hh, dur: e, vel: 60}
+arrangement:
+  - name: test
+    patterns:
+      drums: groove

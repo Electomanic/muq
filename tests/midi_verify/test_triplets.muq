@@ -1,0 +1,21 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  triplet_test:
+    bars:
+      - - {note: C4, dur: qt}
+        - {note: D4, dur: qt}
+        - {note: E4, dur: qt}
+        - {note: F4, dur: qt}
+        - {note: G4, dur: qt}
+        - {note: A4, dur: qt}
+        - {note: B4, dur: h}
+arrangement:
+  - name: test
+    patterns:
+      piano: triplet_test

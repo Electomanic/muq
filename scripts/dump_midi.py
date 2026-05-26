@@ -94,8 +94,9 @@ def _parse_track(ti: int, track: mido.MidiTrack, ppq: int, reverse: bool) -> dic
     # First pass: collect raw events with absolute ticks, find metadata
     abs_tick = 0
     raw_events: list[dict] = []
-    # Track pending note-ons: (channel, note) → (tick, velocity)
-    pending_notes: dict[tuple[int, int], tuple[int, int]] = {}
+    # Track pending note-ons: (channel, note) → list of (tick, velocity)
+    # Uses a queue (FIFO) so overlapping same-pitch notes pair correctly.
+    pending_notes: dict[tuple[int, int], list[tuple[int, int]]] = {}
 
     for msg in track:
         abs_tick += msg.time
@@ -139,13 +140,16 @@ def _parse_track(ti: int, track: mido.MidiTrack, ppq: int, reverse: bool) -> dic
             key = (msg.channel, msg.note)
             if info["channel"] is None:
                 info["channel"] = msg.channel + 1
-            pending_notes[key] = (abs_tick, msg.velocity)
+            pending_notes.setdefault(key, []).append((abs_tick, msg.velocity))
             continue
 
         if msg.type == "note_off" or (msg.type == "note_on" and msg.velocity == 0):
             key = (msg.channel, msg.note)
-            if key in pending_notes:
-                on_tick, vel = pending_notes.pop(key)
+            queue = pending_notes.get(key)
+            if queue:
+                on_tick, vel = queue.pop(0)
+                if not queue:
+                    del pending_notes[key]
                 dur_ticks = abs_tick - on_tick
                 is_drum = (msg.channel == 9)  # 0-indexed ch 10
 

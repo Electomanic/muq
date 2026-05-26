@@ -1,0 +1,23 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  prog:
+    bars:
+      - - {note: C4, dur: w}
+      - - {note: D4, dur: w}
+      - - {note: E4, dur: hd}
+        - {note: F4, dur: e}
+      - - {note: G4, dur: w}
+arrangement:
+  - name: changing_meter
+    time: "4/4"
+    meter_events:
+      - {bar: 3, time: "7/8"}
+      - {bar: 4, time: "4/4"}
+    patterns:
+      piano: prog

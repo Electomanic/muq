@@ -21,6 +21,7 @@ class ResolvedCC:
     channel: int
     cc: int
     value: int
+    interp: str = "step"
 
 
 @dataclass
@@ -28,6 +29,7 @@ class ResolvedPitchBend:
     tick: int
     channel: int
     value: int
+    interp: str = "step"
 
 
 @dataclass
@@ -35,6 +37,7 @@ class ResolvedAftertouch:
     tick: int
     channel: int
     value: int
+    interp: str = "step"
 
 
 @dataclass
@@ -62,6 +65,8 @@ class ResolvedTrack:
     name: str
     channel: int  # 0-indexed
     program: int | None  # None for percussion
+    volume: int  # CC7 value 0-127
+    pan: int  # CC10 value 0-127
     notes: list[ResolvedNote]
     ccs: list[ResolvedCC]
     pitch_bends: list[ResolvedPitchBend]

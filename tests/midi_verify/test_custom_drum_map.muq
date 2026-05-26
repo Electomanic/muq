@@ -1,0 +1,32 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  kit_a:
+    instrument: standard
+    channel: 10
+    drum_map:
+      my_kick: 36
+      my_snare: 40
+  kit_b:
+    instrument: standard
+    channel: 10
+    drum_map:
+      my_kick: 35
+      my_snare: 38
+patterns:
+  beat_a:
+    notation: percussion
+    bars:
+      - - {beat: 1, note: my_kick, dur: q}
+        - {beat: 3, note: my_snare, dur: q}
+  beat_b:
+    notation: percussion
+    bars:
+      - - {beat: 1, note: my_kick, dur: q}
+        - {beat: 3, note: my_snare, dur: q}
+arrangement:
+  - name: compare
+    patterns:
+      kit_a: beat_a
+      kit_b: beat_b

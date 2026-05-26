@@ -1,0 +1,19 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  mixed:
+    bars:
+      # Beat-addressed chord, then sequential continues from its end
+      - - {beat: 1, note: [C4, E4, G4], dur: h}
+        - {note: A4, dur: e}
+        - {note: B4, dur: e}
+        - {note: C5, dur: q}
+arrangement:
+  - name: test
+    patterns:
+      piano: mixed

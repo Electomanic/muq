@@ -1,0 +1,17 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  with_silence:
+    bars:
+      - - {note: C4, dur: w}
+      - []
+      - - {note: E4, dur: w}
+arrangement:
+  - name: test
+    patterns:
+      piano: with_silence

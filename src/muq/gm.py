@@ -151,6 +151,25 @@ GM_INSTRUMENTS: dict[str, int] = {
 # Reverse lookup: program number → canonical name
 GM_PROGRAM_TO_NAME: dict[int, str] = {v: k for k, v in GM_INSTRUMENTS.items()}
 
+# Case-insensitive lookup: lowercased name → program number
+_GM_INSTRUMENTS_LOWER: dict[str, int] = {k.lower(): v for k, v in GM_INSTRUMENTS.items()}
+
+
+def gm_instrument_lookup(name: str) -> int | None:
+    """Case-insensitive GM instrument lookup. Returns program number or None."""
+    return _GM_INSTRUMENTS_LOWER.get(name.lower())
+
+
+# Pan string → MIDI CC 10 value
+_PAN_MAP: dict[str, int] = {"left": 0, "center": 64, "right": 127}
+
+
+def resolve_pan(pan: str | int) -> int:
+    """Resolve a pan value (string or int) to MIDI CC 10 integer 0-127."""
+    if isinstance(pan, int):
+        return max(0, min(127, pan))
+    return _PAN_MAP.get(pan.lower(), 64)
+
 # GM drum map: name → MIDI note (includes primary names and all aliases)
 GM_DRUM_MAP: dict[str, int] = {
     # 35
@@ -279,6 +298,56 @@ ARTICULATIONS: dict[str, tuple[float | None, int | None]] = {
 _NOTE_TO_SEMITONE = {
     "C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11,
 }
+
+# Scale intervals (semitones from root) — §4.4 scale validation
+_SCALE_INTERVALS: dict[str, tuple[int, ...]] = {
+    "major":            (0, 2, 4, 5, 7, 9, 11),
+    "minor":            (0, 2, 3, 5, 7, 8, 10),  # natural minor
+    "harmonic_minor":   (0, 2, 3, 5, 7, 8, 11),
+    "melodic_minor":    (0, 2, 3, 5, 7, 9, 11),
+    "dorian":           (0, 2, 3, 5, 7, 9, 10),
+    "phrygian":         (0, 1, 3, 5, 7, 8, 10),
+    "lydian":           (0, 2, 4, 6, 7, 9, 11),
+    "mixolydian":       (0, 2, 4, 5, 7, 9, 10),
+    "aeolian":          (0, 2, 3, 5, 7, 8, 10),
+    "locrian":          (0, 1, 3, 5, 6, 8, 10),
+    "pentatonic":       (0, 2, 4, 7, 9),
+    "minor_pentatonic": (0, 3, 5, 7, 10),
+    "blues":            (0, 3, 5, 6, 7, 10),
+    "chromatic":        tuple(range(12)),
+}
+
+
+def scale_pitch_classes(key: str) -> frozenset[int] | None:
+    """Return the set of pitch classes (0-11) for the given key string.
+
+    Key format: 'C major', 'F# minor', 'Bb dorian', etc.
+    Returns None if the scale mode is unknown.
+    """
+    parts = key.split()
+    if len(parts) < 2:
+        return None
+    root_str = parts[0].upper()
+    mode = "_".join(parts[1:]).lower()
+
+    # Parse root note semitone
+    idx = 0
+    if root_str[0] not in _NOTE_TO_SEMITONE:
+        return None
+    root = _NOTE_TO_SEMITONE[root_str[0]]
+    idx = 1
+    while idx < len(root_str) and root_str[idx] == "#":
+        root += 1
+        idx += 1
+    while idx < len(root_str) and root_str[idx] == "B":
+        root -= 1
+        idx += 1
+
+    intervals = _SCALE_INTERVALS.get(mode)
+    if intervals is None:
+        return None
+
+    return frozenset((root + i) % 12 for i in intervals)
 
 
 def pitch_to_midi(pitch: str) -> int:

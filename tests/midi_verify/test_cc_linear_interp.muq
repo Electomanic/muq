@@ -1,0 +1,17 @@
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  synth:
+    instrument: synth_brass_1
+    channel: 1
+patterns:
+  filter_sweep:
+    bars:
+      - - {beat: 1, note: C4, dur: w, vel: 90}
+        - {beat: 1, cc: 74, value: 20}
+        - {beat: 4, cc: 74, value: 120, interp: linear}
+arrangement:
+  - name: test
+    patterns:
+      synth: filter_sweep
