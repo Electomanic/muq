@@ -217,6 +217,7 @@ def _check_chord_ties(bar: list, bar_path: str, diags: list[Diagnostic]) -> None
 
 
 def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
+    _TOLERANCE = 0.001
     # Determine which patterns are used by which tracks
     pattern_to_tracks: dict[str, set[str]] = {}
     for section in doc.arrangement:
@@ -291,14 +292,14 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                 # §18.6 BEAT_OUT_OF_RANGE
                 beat = getattr(event, "beat", None)
                 if beat is not None:
-                    if beat < 1 or beat > bpb:
+                    if beat < 1 or beat >= bpb + 1:
                         diags.append(Diagnostic(
                             "BEAT_OUT_OF_RANGE",
-                            f"beat {beat} out of range 1..{bpb}",
+                            f"beat {beat} outside bar ({bpb}-beat bar)",
                             severity="warning", path=ev_path))
                     # §11.4 beat + duration overflow
                     dur = event_dur_beats(event)
-                    if dur > 0 and beat + dur > bpb + 1:
+                    if dur > 0 and beat + dur > bpb + 1 + _TOLERANCE:
                         diags.append(Diagnostic(
                             "BEAT_OVERFLOW",
                             f"beat {beat} + duration {dur} exceeds bar ({bpb} beats)",
@@ -309,7 +310,6 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                     seq_total += event_dur_beats(event)
 
             # §11.4 tolerance-aware bar-total validation
-            _TOLERANCE = 0.001
             if seq_total > bpb + _TOLERANCE:
                 diags.append(Diagnostic(
                     "SEQUENTIAL_OVERFLOW",

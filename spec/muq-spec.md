@@ -1012,7 +1012,7 @@ Implementations MUST detect and report the following error classes:
 
 | Error | Description |
 |-------|-------------|
-| `BEAT_OUT_OF_RANGE` | Beat position is less than 1 or exceeds beats per bar. |
+| `BEAT_OUT_OF_RANGE` | Beat position is less than 1 or >= beats_per_bar + 1 (outside the bar). |
 | `BEAT_OVERFLOW` | An event's beat + duration exceeds the bar boundary. |
 | `SEQUENTIAL_OVERFLOW` | Total duration of sequential events exceeds beats per bar. |
 | `BAR_DURATION_MISMATCH` | Total duration of sequential events is less than beats per bar minus tolerance (warning). |

@@ -44,7 +44,7 @@ patterns:
         - {note: F5, dur_beats: 0.2, vel: 85}
         - {note: G5, dur_beats: 0.2, vel: 100}
         - {note: A5, dur: qd}
-        - {rest: q}
+        - {rest: e}
         - {note: E5, dur: q}
 
   # Glitch bass with 64th note stutters (0.0625 beats each)
@@ -58,7 +58,7 @@ patterns:
         - {note: A1, dur: e}
         - {rest: e}
         - {note: E1, dur: q}
-        - {rest: q}
+        - {rest_beats: 0.625}
         - {note: A1, dur: q}
 
   # Hi-hat rolls using 32nd notes
