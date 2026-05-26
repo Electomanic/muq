@@ -17,6 +17,7 @@ tracks:
 patterns:
   # Bars 1-2 in 4/4, bars 3-4 in 7/8, bar 5 in 5/4
   prog_drums:
+    notation: percussion
     bars:
       # Bar 1 — 4/4
       - - {beat: 1, note: kick,  dur: q, vel: 110}

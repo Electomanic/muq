@@ -9,7 +9,6 @@ from muq.gm import (
     DURATION_TOKENS,
     GM_INSTRUMENTS,
     beats_per_bar,
-    is_pitched_notation,
     parse_time_signature,
     pitch_to_midi,
     resolve_drum_name,
@@ -171,17 +170,6 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
     )
 
 
-def _detect_pattern_percussion(pattern) -> bool:
-    """Auto-detect if a pattern uses drum notation by inspecting note events."""
-    for bar in pattern.bars:
-        for event in bar:
-            if isinstance(event, NoteEvent):
-                notes = event.note if isinstance(event.note, list) else [event.note]
-                for n in notes:
-                    return not is_pitched_notation(n)
-    return False  # no note events, default to melodic
-
-
 def resolve_pattern(
     doc: MuqDocument,
     pattern_name: str,
@@ -189,11 +177,11 @@ def resolve_pattern(
 ) -> ResolvedSong:
     """Resolve a single pattern in isolation for clip export.
 
-    Uses the song's base tempo and time signature. Auto-detects whether
-    the pattern uses pitched or drum notation.
+    Uses the song's base tempo and time signature. Reads the pattern's
+    `notation` field to determine pitched vs percussion resolution.
     """
     pattern = doc.patterns[pattern_name]
-    is_perc = _detect_pattern_percussion(pattern)
+    is_perc = pattern.notation == "percussion"
 
     # Build a minimal track-like context for _resolve_bar
     from muq.model import Track

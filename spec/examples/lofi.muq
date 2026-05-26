@@ -22,6 +22,7 @@ tracks:
 
 patterns:
   lofi_drums:
+    notation: percussion
     swing: 62
     bars:
       - - {beat: 1, note: kick, dur: q, vel: 100}

@@ -54,6 +54,7 @@ patterns:
 
   # Drums with sustain pedal
   drums_basic:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q, vel: 110}
         - {beat: 1, note: hh, dur: e}

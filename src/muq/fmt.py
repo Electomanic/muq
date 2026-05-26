@@ -84,6 +84,8 @@ def _write_tracks(out: StringIO, doc: MuqDocument) -> None:
 def _write_patterns(out: StringIO, doc: MuqDocument) -> None:
     for name, pattern in doc.patterns.items():
         out.write(f"  {name}:\n")
+        if pattern.notation != "pitched":
+            out.write(f"    notation: {pattern.notation}\n")
         if pattern.swing != 50:
             out.write(f"    swing: {pattern.swing}\n")
         out.write("    bars:\n")

@@ -107,23 +107,27 @@ def _validate_tracks(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 def _check_pitch_notation_consistency(
     pattern, path: str, diags: list[Diagnostic]
 ) -> None:
-    """Check that all note events in a pattern use the same notation style."""
-    has_pitched = False
-    has_drum = False
+    """Check that all note events match the pattern's declared notation style."""
+    if pattern.notation not in ("pitched", "percussion"):
+        diags.append(Diagnostic(
+            "INVALID_NOTATION",
+            f"Unknown notation: {pattern.notation}",
+            path=path,
+        ))
+        return
+
+    expect_pitched = pattern.notation == "pitched"
     for bar in pattern.bars:
         for event in bar:
             if not isinstance(event, NoteEvent):
                 continue
             notes = event.note if isinstance(event.note, list) else [event.note]
             for n in notes:
-                if is_pitched_notation(n):
-                    has_pitched = True
-                else:
-                    has_drum = True
-                if has_pitched and has_drum:
+                if is_pitched_notation(n) != expect_pitched:
+                    kind = "pitched" if expect_pitched else "percussion"
                     diags.append(Diagnostic(
                         "MIXED_PITCH_NOTATION",
-                        "Pattern mixes pitched notation (e.g. C4) and drum notation (e.g. kick)",
+                        f"Note '{n}' does not match pattern notation: {kind}",
                         path=path,
                     ))
                     return
@@ -259,6 +263,20 @@ def _validate_arrangement(doc: MuqDocument, diags: list[Diagnostic]) -> None:
             if pat_name not in doc.patterns:
                 diags.append(Diagnostic("UNKNOWN_PATTERN",
                                         f"Unknown pattern: {pat_name}", path=f"{path}.patterns"))
+            # Notation–track cross-check
+            if track_name in doc.tracks and pat_name in doc.patterns:
+                track = doc.tracks[track_name]
+                pattern = doc.patterns[pat_name]
+                if pattern.notation == "percussion" and not track.is_percussion:
+                    diags.append(Diagnostic(
+                        "NOTATION_TRACK_MISMATCH",
+                        f"Percussion pattern '{pat_name}' bound to non-percussion track '{track_name}'",
+                        severity="warning", path=f"{path}.patterns"))
+                elif pattern.notation == "pitched" and track.is_percussion:
+                    diags.append(Diagnostic(
+                        "NOTATION_TRACK_MISMATCH",
+                        f"Pitched pattern '{pat_name}' bound to percussion track '{track_name}'",
+                        severity="warning", path=f"{path}.patterns"))
 
         # Determine bar count from the longest pattern in the section
         max_bars = 0

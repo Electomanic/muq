@@ -143,6 +143,7 @@ tracks:
     channel: 1
 patterns:
   mixed:
+    notation: pitched
     bars:
     - [{note: C4, dur: q}, {note: kick, dur: q}]
 arrangement:
@@ -154,6 +155,56 @@ arrangement:
         diags = validate(doc)
         codes = [d.code for d in diags]
         assert "MIXED_PITCH_NOTATION" in codes
+
+    def test_drum_notation_with_pitched_notes(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+    percussion: true
+patterns:
+  bad:
+    notation: percussion
+    bars:
+    - [{note: C4, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      drums: bad
+"""
+        doc = parse(yaml_str)
+        diags = validate(doc)
+        codes = [d.code for d in diags]
+        assert "MIXED_PITCH_NOTATION" in codes
+
+    def test_notation_track_mismatch_warning(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  beat:
+    notation: percussion
+    bars:
+    - [{note: kick, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      piano: beat
+"""
+        doc = parse(yaml_str)
+        diags = validate(doc)
+        codes = [d.code for d in diags]
+        assert "NOTATION_TRACK_MISMATCH" in codes
+        assert all(d.severity == "warning" for d in diags if d.code == "NOTATION_TRACK_MISMATCH")
 
     def test_pure_drum_pattern_ok(self):
         doc = parse(EXAMPLES_DIR / "drums.muq")

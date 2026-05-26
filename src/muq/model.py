@@ -74,6 +74,7 @@ Bar = list[Event]
 @dataclass
 class Pattern:
     bars: list[Bar]
+    notation: str = "pitched"
     swing: int = 50
 
 

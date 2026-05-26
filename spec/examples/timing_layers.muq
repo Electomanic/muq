@@ -20,6 +20,7 @@ tracks:
 patterns:
   # Layer 1: Swing only (no offset_beats)
   swung_ride:
+    notation: percussion
     swing: 67
     bars:
       - - {beat: 1, note: ride, dur: e, vel: 90}
@@ -42,6 +43,7 @@ patterns:
 
   # Layer 3: No swing, offset_beats only (pocket drums)
   pocket_kick_snare:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q, vel: 110}
         - {beat: 2, note: snare, dur: q, vel: 95, offset_beats: -0.015}
