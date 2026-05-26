@@ -317,6 +317,26 @@ def pitch_to_midi(pitch: str) -> int:
     return midi_note
 
 
+def is_pitched_notation(name: str) -> bool:
+    """Return True if a note string looks like pitched notation (e.g. C4, F#3, Bb-1)."""
+    if not name:
+        return False
+    upper = name.upper()
+    if upper[0] not in _NOTE_TO_SEMITONE:
+        return False
+    i = 1
+    while i < len(upper) and upper[i] in ("#", "B"):
+        i += 1
+    if i >= len(upper):
+        return False
+    rest = upper[i:]
+    try:
+        int(rest)
+        return True
+    except ValueError:
+        return False
+
+
 def resolve_drum_name(
     name: str,
     per_track_map: dict[str, int] | None,

@@ -8,10 +8,10 @@ import pytest
 
 from muq.parser import parse, ParseError
 from muq.validate import validate
-from muq.resolve import resolve
+from muq.resolve import resolve, resolve_pattern
 from muq.midi import to_midi
 from muq.fmt import fmt
-from muq.gm import pitch_to_midi, DURATION_TOKENS, beats_per_bar, GM_INSTRUMENTS, GM_DRUM_MAP
+from muq.gm import pitch_to_midi, is_pitched_notation, DURATION_TOKENS, beats_per_bar, GM_INSTRUMENTS, GM_DRUM_MAP
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "spec" / "examples"
 INVALID_DIR = Path(__file__).resolve().parent.parent / "spec" / "invalid"
@@ -60,6 +60,15 @@ class TestGM:
         assert GM_DRUM_MAP["kick"] == 36
         assert GM_DRUM_MAP["bd"] == 36
         assert GM_DRUM_MAP["bass_drum"] == 36
+
+    def test_is_pitched_notation(self):
+        assert is_pitched_notation("C4") is True
+        assert is_pitched_notation("F#3") is True
+        assert is_pitched_notation("Bb-1") is True
+        assert is_pitched_notation("kick") is False
+        assert is_pitched_notation("snare") is False
+        assert is_pitched_notation("hh") is False
+        assert is_pitched_notation("tom1") is False
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +132,41 @@ class TestValidate:
         diags = validate(doc)
         assert len(diags) == 0
 
+    def test_mixed_pitch_notation(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  mixed:
+    bars:
+    - [{note: C4, dur: q}, {note: kick, dur: q}]
+arrangement:
+  - name: main
+    patterns:
+      piano: mixed
+"""
+        doc = parse(yaml_str)
+        diags = validate(doc)
+        codes = [d.code for d in diags]
+        assert "MIXED_PITCH_NOTATION" in codes
+
+    def test_pure_drum_pattern_ok(self):
+        doc = parse(EXAMPLES_DIR / "drums.muq")
+        diags = validate(doc)
+        codes = [d.code for d in diags]
+        assert "MIXED_PITCH_NOTATION" not in codes
+
+    def test_pure_pitched_pattern_ok(self):
+        doc = parse(EXAMPLES_DIR / "minimal.muq")
+        diags = validate(doc)
+        codes = [d.code for d in diags]
+        assert "MIXED_PITCH_NOTATION" not in codes
+
 
 # ---------------------------------------------------------------------------
 # Resolve
@@ -151,6 +195,48 @@ class TestResolve:
         drum_tracks = [t for t in resolved.tracks if t.program is None]
         assert len(drum_tracks) >= 1
         assert len(drum_tracks[0].notes) > 0
+
+
+# ---------------------------------------------------------------------------
+# Clip export (resolve_pattern)
+# ---------------------------------------------------------------------------
+
+class TestClipExport:
+    def test_resolve_pitched_pattern(self):
+        doc = parse(EXAMPLES_DIR / "minimal.muq")
+        resolved = resolve_pattern(doc, "melody")
+        assert len(resolved.tracks) == 1
+        assert resolved.tracks[0].program is not None  # melodic
+        assert len(resolved.tracks[0].notes) == 1
+        assert resolved.tracks[0].notes[0].midi_note == 60
+
+    def test_resolve_drum_pattern(self):
+        doc = parse(EXAMPLES_DIR / "drums.muq")
+        # Get first pattern name
+        pname = next(iter(doc.patterns))
+        resolved = resolve_pattern(doc, pname)
+        assert len(resolved.tracks) == 1
+        assert resolved.tracks[0].program is None  # percussion
+        assert len(resolved.tracks[0].notes) > 0
+
+    def test_clip_has_tempo_and_time_sig(self):
+        doc = parse(EXAMPLES_DIR / "minimal.muq")
+        resolved = resolve_pattern(doc, "melody")
+        assert resolved.tempos[0].tempo_bpm == 120
+        assert resolved.time_signatures[0].numerator == 4
+        assert resolved.time_signatures[0].denominator == 4
+
+    def test_all_patterns_export_as_clips(self):
+        for path in sorted(EXAMPLES_DIR.glob("*.muq")):
+            doc = parse(path)
+            diags = validate(doc)
+            errors = [d for d in diags if d.severity == "error"]
+            if errors:
+                continue
+            for pname in doc.patterns:
+                resolved = resolve_pattern(doc, pname)
+                mid = to_midi(resolved)
+                assert mid.type == 1, f"{path.name}:{pname} failed"
 
 
 # ---------------------------------------------------------------------------

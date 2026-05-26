@@ -9,6 +9,7 @@ from muq.gm import (
     DURATION_TOKENS,
     GM_INSTRUMENTS,
     beats_per_bar,
+    is_pitched_notation,
     parse_time_signature,
     pitch_to_midi,
     resolve_drum_name,
@@ -167,6 +168,80 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
         tempos=tempos,
         time_signatures=time_sigs,
         tracks=tracks_out,
+    )
+
+
+def _detect_pattern_percussion(pattern) -> bool:
+    """Auto-detect if a pattern uses drum notation by inspecting note events."""
+    for bar in pattern.bars:
+        for event in bar:
+            if isinstance(event, NoteEvent):
+                notes = event.note if isinstance(event.note, list) else [event.note]
+                for n in notes:
+                    return not is_pitched_notation(n)
+    return False  # no note events, default to melodic
+
+
+def resolve_pattern(
+    doc: MuqDocument,
+    pattern_name: str,
+    ppq: int = 480,
+) -> ResolvedSong:
+    """Resolve a single pattern in isolation for clip export.
+
+    Uses the song's base tempo and time signature. Auto-detects whether
+    the pattern uses pitched or drum notation.
+    """
+    pattern = doc.patterns[pattern_name]
+    is_perc = _detect_pattern_percussion(pattern)
+
+    # Build a minimal track-like context for _resolve_bar
+    from muq.model import Track
+    if is_perc:
+        dummy_track = Track(instrument="standard", channel=10, percussion=True)
+    else:
+        dummy_track = Track(instrument="acoustic_grand_piano", channel=1)
+
+    accum = _TrackAccum(
+        name=pattern_name,
+        channel=dummy_track.channel - 1,
+        program=None if is_perc else 0,
+    )
+
+    # Tempo and time sig from song
+    tempo = doc.song.tempo
+    time = doc.song.time
+    num, denom = parse_time_signature(time)
+
+    tempos = [ResolvedTempo(tick=0, tempo_bpm=tempo)]
+    time_sigs = [ResolvedTimeSig(tick=0, numerator=num, denominator=denom)]
+
+    # Walk bars
+    bar_beat_pos = 0.0
+    bpb = beats_per_bar(time)
+    for bar in pattern.bars:
+        _resolve_bar(
+            bar, bar_beat_pos, bpb, pattern.swing,
+            dummy_track, doc, ppq, accum,
+        )
+        bar_beat_pos += bpb
+
+    track_out = ResolvedTrack(
+        name=accum.name,
+        channel=accum.channel,
+        program=accum.program,
+        notes=accum.notes,
+        ccs=accum.ccs,
+        pitch_bends=accum.pitch_bends,
+        aftertouches=accum.aftertouches,
+        texts=accum.texts,
+    )
+
+    return ResolvedSong(
+        ppq=ppq,
+        tempos=tempos,
+        time_signatures=time_sigs,
+        tracks=[track_out],
     )
 
 

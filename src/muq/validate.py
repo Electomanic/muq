@@ -10,6 +10,7 @@ from muq.gm import (
     DURATION_TOKENS,
     ARTICULATIONS,
     beats_per_bar,
+    is_pitched_notation,
     parse_time_signature,
     pitch_to_midi,
     resolve_drum_name,
@@ -103,6 +104,30 @@ def _validate_tracks(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 # Patterns
 # ---------------------------------------------------------------------------
 
+def _check_pitch_notation_consistency(
+    pattern, path: str, diags: list[Diagnostic]
+) -> None:
+    """Check that all note events in a pattern use the same notation style."""
+    has_pitched = False
+    has_drum = False
+    for bar in pattern.bars:
+        for event in bar:
+            if not isinstance(event, NoteEvent):
+                continue
+            notes = event.note if isinstance(event.note, list) else [event.note]
+            for n in notes:
+                if is_pitched_notation(n):
+                    has_pitched = True
+                else:
+                    has_drum = True
+                if has_pitched and has_drum:
+                    diags.append(Diagnostic(
+                        "MIXED_PITCH_NOTATION",
+                        "Pattern mixes pitched notation (e.g. C4) and drum notation (e.g. kick)",
+                        path=path,
+                    ))
+                    return
+
 def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
     # Determine which patterns are used by which tracks
     pattern_to_tracks: dict[str, set[str]] = {}
@@ -115,6 +140,9 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
         if not pattern.bars:
             diags.append(Diagnostic("EMPTY_PATTERN", "Pattern has zero bars", path=path))
             continue
+
+        # Check pitch notation consistency (§6.2)
+        _check_pitch_notation_consistency(pattern, path, diags)
 
         track_names = pattern_to_tracks.get(name, set())
         tracks = [doc.tracks[tn] for tn in track_names if tn in doc.tracks]

@@ -158,6 +158,7 @@ An empty bar (empty list `[]`) represents a bar of silence.
 
 - Pattern names MUST be unique.
 - Patterns are pure musical data. Track binding is specified in the `arrangement` (see §7).
+- **Pitch notation consistency**: If a pattern contains note events, all note events within that pattern MUST use the same pitch notation style — either all pitched notation (e.g. `C4`, `F#3`) or all drum notation (e.g. `kick`, `snare`). Mixing pitched and drum notation in the same pattern is invalid (`MIXED_PITCH_NOTATION`). Events without pitches (rests, CC, pitch bend, aftertouch, text) do not affect this constraint. A pattern with no note events (e.g. pure automation) is valid on any track.
 
 ### 6.3 Swing
 
@@ -929,6 +930,7 @@ Implementations MUST detect and report the following error classes:
 |-------|-------------|
 | `MISSING_BARS` | Pattern is missing `bars`. |
 | `EMPTY_PATTERN` | Pattern has zero bars. |
+| `MIXED_PITCH_NOTATION` | Pattern contains both pitched notation (`C4`) and drum notation (`kick`) in its note events. All note events in a pattern must use the same notation style. |
 
 ### 18.5 Event Errors
 
@@ -989,7 +991,6 @@ The following features are being considered for future spec versions and are NOT
 - **Exponential / curve interpolation**: Additional `interp` modes beyond `step` and `linear` (e.g. `ease_in`, `ease_out`, `bezier`) for smoother automation curves.
 - **Key-poly aftertouch**: Per-note aftertouch events (currently only channel aftertouch is supported).
 - **MPE (MIDI Polyphonic Expression)**: Per-note pitch bend and pressure for microtonal and expressive performance.
-- **Clip export mode**: Exporting individual patterns as separate MIDI files for DAW clip-based workflows.
 - **Short-key aliases**: Optional compact key aliases (e.g. `n` for `note`, `d` for `dur`) for terseness. May be reintroduced as an optional compact mode in a future version.
 - **Song-level groove templates**: A song-level `groove` object specifying humanization ranges for timing and velocity across all patterns.
 - **Grace notes and ornaments**: Acciaccatura, appoggiatura, trills, mordents, turns, and other ornamental figures.
