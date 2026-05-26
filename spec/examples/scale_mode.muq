@@ -1,0 +1,49 @@
+# Scale mode example — demonstrates scale_mode validation.
+
+song:
+  title: Scale Validation Demo
+  tempo: 100
+  time: 4/4
+  key: C major
+  scale_mode: warn
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  # All notes in C major scale — should produce no warnings
+  in_scale:
+    bars:
+      - - {note: C4, dur: e}
+        - {note: D4, dur: e}
+        - {note: E4, dur: e}
+        - {note: F4, dur: e}
+        - {note: G4, dur: e}
+        - {note: A4, dur: e}
+        - {note: B4, dur: e}
+        - {note: C5, dur: e}
+
+  # Contains F#4 and Bb4 — outside C major, should warn
+  chromatic_passing:
+    bars:
+      - - {note: C4, dur: q}
+        - {note: D4, dur: q}
+        - {note: F#4, dur: q}
+        - {note: G4, dur: q}
+      - - {note: A4, dur: q}
+        - {note: Bb4, dur: q}
+        - {note: B4, dur: q}
+        - {note: C5, dur: q}
+
+arrangement:
+  - name: diatonic
+    patterns:
+      piano: in_scale
+    repeat: 2
+
+  - name: chromatic
+    patterns:
+      piano: chromatic_passing
+    repeat: 2

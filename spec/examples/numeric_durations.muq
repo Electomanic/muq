@@ -1,0 +1,94 @@
+# Numeric durations — demonstrates dur_beats/db for values tokens cannot express.
+# 32nd notes, 64th notes, quintuplets, and arbitrary timing.
+
+song:
+  title: Micro Rhythms
+  tempo: 90
+  time: 4/4
+  key: A minor
+
+tracks:
+  lead:
+    instrument: electric_piano_1
+    channel: 1
+
+  glitch:
+    instrument: synth_bass_2
+    channel: 2
+
+  drums:
+    instrument: standard
+    channel: 10
+
+patterns:
+  # 32nd note run — using the 'x' (thirty-second) token
+  fast_run:
+    bars:
+      - - {note: A4, dur: x}
+        - {note: B4, dur: x}
+        - {note: C5, dur: x}
+        - {note: D5, dur: x}
+        - {note: E5, dur: x}
+        - {note: D5, dur: x}
+        - {note: C5, dur: x}
+        - {note: B4, dur: x}
+        - {note: A4, dur: q}
+        - {note: E4, dur: h}
+
+  # Quintuplet pattern (5 evenly spaced notes per beat = 0.2 beats each)
+  quintuplet:
+    bars:
+      - - {note: C5, dur_beats: 0.2, vel: 100}
+        - {note: D5, dur_beats: 0.2, vel: 85}
+        - {note: E5, dur_beats: 0.2, vel: 70}
+        - {note: F5, dur_beats: 0.2, vel: 85}
+        - {note: G5, dur_beats: 0.2, vel: 100}
+        - {note: A5, dur: qd}
+        - {rest: q}
+        - {note: E5, dur: q}
+
+  # Glitch bass with 64th note stutters (0.0625 beats each)
+  glitch_bass:
+    bars:
+      - - {note: A1, dur_beats: 0.0625}
+        - {note: A1, dur_beats: 0.0625}
+        - {rest_beats: 0.125}
+        - {note: A1, dur_beats: 0.0625}
+        - {rest_beats: 0.0625}
+        - {note: A1, dur: e}
+        - {rest: e}
+        - {note: E1, dur: q}
+        - {rest: q}
+        - {note: A1, dur: q}
+
+  # Hi-hat rolls using 32nd notes
+  drums_roll:
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 110}
+        - {beat: 1, note: hh, dur: x, vel: 90}
+        - {beat: 1.125, note: hh, dur: x, vel: 70}
+        - {beat: 1.25, note: hh, dur: x, vel: 50}
+        - {beat: 1.375, note: hh, dur: x, vel: 70}
+        - {beat: 1.5, note: hh, dur: e, vel: 90}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: kick, dur: q}
+        - {beat: 3, note: hh, dur: e}
+        - {beat: 3.5, note: hh, dur: e}
+        - {beat: 4, note: snare, dur: q, vel: 100}
+
+arrangement:
+  - name: run
+    patterns:
+      lead: fast_run
+    repeat: 2
+
+  - name: quintuplets
+    patterns:
+      lead: quintuplet
+    repeat: 2
+
+  - name: glitch
+    patterns:
+      glitch: glitch_bass
+      drums: drums_roll
+    repeat: 4

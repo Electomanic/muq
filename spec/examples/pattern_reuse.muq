@@ -1,0 +1,91 @@
+# Pattern reuse — demonstrates the same pattern assigned to multiple tracks.
+# The arrangement mapping binds patterns to tracks, so one pattern can be
+# played by different instruments simultaneously or in different sections.
+
+song:
+  title: Pattern Reuse Demo
+  tempo: 100
+  time: 4/4
+  key: C major
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+    volume: 100
+    pan: center
+
+  strings:
+    instrument: string_ensemble_1
+    channel: 2
+    volume: 80
+    pan: 40
+
+  synth:
+    instrument: pad_warm
+    channel: 3
+    volume: 70
+    pan: 90
+
+  bass:
+    instrument: acoustic_bass
+    channel: 4
+    volume: 95
+
+patterns:
+  # A simple melody — reusable across instruments
+  melody_a:
+    bars:
+      - - {note: C4, dur: q, vel: 90}
+        - {note: E4, dur: q}
+        - {note: G4, dur: q}
+        - {note: C5, dur: q}
+      - - {note: B4, dur: q}
+        - {note: G4, dur: q}
+        - {note: E4, dur: h}
+
+  # A chord progression — also reusable
+  chords:
+    bars:
+      - - {note: [C3, E3, G3], dur: w, vel: 70}
+      - - {note: [F3, A3, C4], dur: w, vel: 70}
+
+  # Bass line
+  bass_line:
+    bars:
+      - - {note: C2, dur: h}
+        - {note: G2, dur: h}
+      - - {note: F2, dur: h}
+        - {note: C2, dur: h}
+
+arrangement:
+  # Piano plays melody alone
+  - name: intro
+    patterns:
+      piano: melody_a
+    repeat: 2
+
+  # Piano and strings play the SAME melody (unison with different timbres)
+  - name: unison
+    patterns:
+      piano: melody_a
+      strings: melody_a
+      bass: bass_line
+    repeat: 2
+
+  # Strings take the melody, synth plays chords, piano rests
+  - name: variation
+    patterns:
+      strings: melody_a
+      synth: chords
+      bass: bass_line
+    repeat: 2
+
+  # Everyone plays together — melody on piano and synth simultaneously
+  - name: tutti
+    patterns:
+      piano: melody_a
+      strings: chords
+      synth: melody_a
+      bass: bass_line
+    repeat: 4

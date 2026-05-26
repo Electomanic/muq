@@ -1,0 +1,67 @@
+# Pickup bar (anacrusis) example — demonstrates partial first bar
+
+song:
+  title: "Pickup Demo"
+  tempo: 100
+  time: 3/4
+
+tracks:
+  melody:
+    instrument: violin
+    channel: 1
+  bass:
+    instrument: acoustic_bass
+    channel: 2
+
+patterns:
+  # Pickup: single beat before the first full bar
+  melody_pickup:
+    bars:
+      # This bar is a pickup — only 1 beat long (set by pickup_beats in arrangement)
+      - - {note: G4, dur: q, vel: 80}
+      # Full bars follow
+      - - {note: C5, dur: q, vel: 100}
+        - {note: E5, dur: q, vel: 90}
+        - {note: G5, dur: q, vel: 85}
+      - - {note: F5, dur: h, vel: 95}
+        - {note: E5, dur: q, vel: 80}
+      - - {note: D5, dur: hd, vel: 90}
+
+  melody_verse:
+    bars:
+      - - {note: C5, dur: hd, vel: 95}
+      - - {note: E5, dur: q, vel: 85}
+        - {note: D5, dur: q, vel: 80}
+        - {note: C5, dur: q, vel: 90}
+      - - {note: B4, dur: h, vel: 85}
+        - {note: A4, dur: q, vel: 75}
+      - - {note: G4, dur: hd, vel: 90}
+
+  bass_pickup:
+    bars:
+      # Pickup bar — 1 beat rest
+      - - {rest: q}
+      # Full bars
+      - - {note: C3, dur: hd, vel: 85}
+      - - {note: F3, dur: hd, vel: 80}
+      - - {note: G3, dur: hd, vel: 85}
+
+  bass_verse:
+    bars:
+      - - {note: C3, dur: hd, vel: 85}
+      - - {note: A2, dur: hd, vel: 80}
+      - - {note: D3, dur: hd, vel: 85}
+      - - {note: G2, dur: hd, vel: 80}
+
+arrangement:
+  - name: "Intro"
+    pickup_beats: 1
+    patterns:
+      melody: melody_pickup
+      bass: bass_pickup
+
+  - name: "Verse"
+    repeat: 2
+    patterns:
+      melody: melody_verse
+      bass: bass_verse

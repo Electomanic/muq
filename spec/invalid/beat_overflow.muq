@@ -1,0 +1,39 @@
+# INVALID: Beat overflow — events extend past the bar boundary.
+# In 4/4 time, a bar has 4 quarter-note beats.
+#
+# NOTE: This file passes JSON Schema validation (schema only checks structure).
+# These errors are SEMANTIC and must be caught by the implementation validator.
+#
+# Expected errors:
+#   - BEAT_OVERFLOW: beat 4 + half note (2 beats) = extends to beat 6, exceeds bar (4 beats)
+#   - SEQUENTIAL_OVERFLOW: 5 quarter notes = 5 beats, exceeds 4 beats per bar
+
+song:
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  # Beat-addressed overflow: half note starting at beat 4 extends past bar
+  beat_overflow:
+    bars:
+      - - {beat: 1, note: C4, dur: q}
+        - {beat: 4, note: E4, dur: h}
+
+  # Sequential overflow: total duration exceeds bar length
+  seq_overflow:
+    bars:
+      - - {note: C4, dur: q}
+        - {note: D4, dur: q}
+        - {note: E4, dur: q}
+        - {note: F4, dur: q}
+        - {note: G4, dur: q}
+
+arrangement:
+  - name: main
+    patterns:
+      piano: beat_overflow

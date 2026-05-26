@@ -1,0 +1,76 @@
+# Automation example — demonstrates CC, pitch bend, and aftertouch events.
+
+song:
+  title: Filter Sweep
+  tempo: 128
+  time: 4/4
+  key: C minor
+
+tracks:
+  synth:
+    instrument: lead_sawtooth
+    channel: 1
+    volume: 100
+
+  bass:
+    instrument: synth_bass_1
+    channel: 2
+
+  drums:
+    instrument: standard
+    channel: 10
+
+patterns:
+  # Synth lead with filter sweep and pitch bend
+  synth_lead:
+    bars:
+      - - {beat: 1, note: C4, dur: h, vel: 100}
+        - {beat: 1, cc: 74, value: 30}
+        - {beat: 2, cc: 74, value: 60}
+        - {beat: 3, note: Eb4, dur: h, vel: 90}
+        - {beat: 3, cc: 74, value: 90}
+        - {beat: 4, cc: 74, value: 120}
+      - - {beat: 1, note: G4, dur: w, vel: 110}
+        - {beat: 1, cc: 74, value: 127}
+        - {beat: 1, pitch_bend: 0}
+        - {beat: 2, pitch_bend: 2048}
+        - {beat: 3, pitch_bend: 4096}
+        - {beat: 4, pitch_bend: 0}
+        - {beat: 4, cc: 74, value: 60}
+
+  # Bass with aftertouch swell
+  bass_swell:
+    bars:
+      - - {note: C2, dur: w, vel: 100}
+        - {beat: 1, aftertouch: 0}
+        - {beat: 2, aftertouch: 40}
+        - {beat: 3, aftertouch: 80}
+        - {beat: 4, aftertouch: 120}
+      - - {note: Eb2, dur: w, vel: 100}
+        - {beat: 1, aftertouch: 100}
+        - {beat: 2, aftertouch: 60}
+        - {beat: 3, aftertouch: 30}
+        - {beat: 4, aftertouch: 0}
+
+  # Drums with sustain pedal
+  drums_basic:
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 110}
+        - {beat: 1, note: hh, dur: e}
+        - {beat: 1.5, note: hh, dur: e}
+        - {beat: 2, note: snare, dur: q}
+        - {beat: 2, note: hh, dur: e}
+        - {beat: 2.5, note: hh, dur: e}
+        - {beat: 3, note: kick, dur: q}
+        - {beat: 3, note: hh, dur: e}
+        - {beat: 3.5, note: hh, dur: e}
+        - {beat: 4, note: snare, dur: q}
+        - {beat: 4, note: hh_open, dur: e}
+
+arrangement:
+  - name: build
+    patterns:
+      synth: synth_lead
+      bass: bass_swell
+      drums: drums_basic
+    repeat: 4

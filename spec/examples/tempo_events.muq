@@ -1,0 +1,80 @@
+# Tempo events — demonstrates ritardando, accelerando, and mid-section
+# tempo changes using the arrangement-level tempo_events array.
+
+song:
+  title: Tempo Changes
+  tempo: 120
+  time: 4/4
+  key: G major
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+  bass:
+    instrument: acoustic_bass
+    channel: 2
+
+patterns:
+  # Simple repeating figure
+  piano_phrase:
+    bars:
+      - - {note: G4, dur: q, vel: 90}
+        - {note: A4, dur: q}
+        - {note: B4, dur: q}
+        - {note: D5, dur: q}
+      - - {note: C5, dur: h}
+        - {note: B4, dur: h}
+      - - {note: A4, dur: q}
+        - {note: G4, dur: q}
+        - {note: F#4, dur: q}
+        - {note: E4, dur: q}
+      - - {note: D4, dur: w}
+
+  bass_phrase:
+    bars:
+      - - {note: G2, dur: h}
+        - {note: D2, dur: h}
+      - - {note: C2, dur: h}
+        - {note: G2, dur: h}
+      - - {note: A2, dur: h}
+        - {note: D2, dur: h}
+      - - {note: G2, dur: w}
+
+arrangement:
+  # Steady tempo
+  - name: steady
+    patterns:
+      piano: piano_phrase
+      bass: bass_phrase
+    tempo: 120
+    repeat: 2
+
+  # Accelerando: speed up from 120 to 160 over 4 bars
+  - name: accelerando
+    patterns:
+      piano: piano_phrase
+      bass: bass_phrase
+    tempo: 120
+    tempo_events:
+      - {bar: 1, beat: 1, tempo: 120}
+      - {bar: 4, beat: 4, tempo: 160, interp: linear}
+
+  # Fast section
+  - name: fast
+    patterns:
+      piano: piano_phrase
+      bass: bass_phrase
+    tempo: 160
+    repeat: 2
+
+  # Ritardando: slow down from 160 to 72 over 4 bars
+  - name: ritardando
+    patterns:
+      piano: piano_phrase
+      bass: bass_phrase
+    tempo: 160
+    tempo_events:
+      - {bar: 1, beat: 1, tempo: 160}
+      - {bar: 4, beat: 1, tempo: 72, interp: linear}

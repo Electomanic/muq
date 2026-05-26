@@ -1,0 +1,63 @@
+# Timing layers — demonstrates the interaction of beat positioning,
+# swing, and offset_beats as defined in §11.6.
+#
+# Final position = swing(base_position) + offset_beats
+# Absolute tick  = round((bar_start_beats + final_position - 1) × PPQ)
+
+song:
+  title: "Timing Layers Demo"
+  tempo: 95
+  time: 4/4
+
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+  keys:
+    instrument: electric_piano_1
+    channel: 2
+
+patterns:
+  # Layer 1: Swing only (no offset_beats)
+  swung_ride:
+    swing: 67
+    bars:
+      - - {beat: 1, note: ride, dur: e, vel: 90}
+        - {beat: 1.5, note: ride, dur: e, vel: 55}    # swung to ~1.67
+        - {beat: 2, note: ride, dur: e, vel: 80}
+        - {beat: 2.5, note: ride, dur: e, vel: 55}    # swung to ~2.67
+        - {beat: 3, note: ride, dur: e, vel: 90}
+        - {beat: 3.5, note: ride, dur: e, vel: 55}    # swung to ~3.67
+        - {beat: 4, note: ride, dur: e, vel: 80}
+        - {beat: 4.5, note: ride, dur: e, vel: 55}    # swung to ~4.67
+
+  # Layer 2: Swing + offset_beats for extra humanization
+  swung_comping:
+    swing: 67
+    bars:
+      - - {beat: 1, note: [Eb4, G4, Bb4], dur: e, vel: 75}
+        - {beat: 2.5, note: [Eb4, G4, Bb4], dur: e, vel: 65, offset_beats: 0.02}
+        - {beat: 4, note: [Db4, F4, Ab4], dur: e, vel: 70, offset_beats: -0.01}
+        - {beat: 4.5, note: [Db4, F4, Ab4], dur: e, vel: 55}
+
+  # Layer 3: No swing, offset_beats only (pocket drums)
+  pocket_kick_snare:
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 110}
+        - {beat: 2, note: snare, dur: q, vel: 95, offset_beats: -0.015}
+        - {beat: 3, note: kick, dur: e, vel: 100}
+        - {beat: 3.5, note: kick, dur: e, vel: 90}
+        - {beat: 4, note: snare, dur: q, vel: 100, offset_beats: -0.015}
+
+arrangement:
+  - name: "Timing Layers"
+    repeat: 8
+    patterns:
+      drums: swung_ride
+      keys: swung_comping
+
+  - name: "Pocket Feel"
+    repeat: 4
+    patterns:
+      drums: pocket_kick_snare
+      keys: swung_comping

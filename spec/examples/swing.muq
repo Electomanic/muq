@@ -1,0 +1,84 @@
+# Swing example — demonstrates pattern-level swing feel
+# Swing displaces off-beat eighth notes (positions X.5) later in time.
+
+song:
+  title: "Swing Demo"
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+  bass:
+    instrument: acoustic_bass
+    channel: 2
+  drums:
+    instrument: standard
+    channel: 10
+
+patterns:
+  # Straight eighths (swing: 50 is the default, shown explicitly)
+  straight_comping:
+    swing: 50
+    bars:
+      - - {note: [C4, E4, G4], dur: e}
+        - {note: [C4, E4, G4], dur: e}
+        - {note: [C4, E4, G4], dur: e}
+        - {note: [C4, E4, G4], dur: e}
+        - {note: [C4, E4, G4], dur: e}
+        - {note: [C4, E4, G4], dur: e}
+        - {note: [C4, E4, G4], dur: e}
+        - {note: [C4, E4, G4], dur: e}
+
+  # Triplet swing — classic jazz feel
+  jazz_comping:
+    swing: 67
+    bars:
+      - - {note: [C4, E4, G4, Bb4], dur: e, vel: 85}
+        - {note: [C4, E4, G4, Bb4], dur: e, vel: 60}
+        - {note: [Bb3, D4, F4, Ab4], dur: e, vel: 80}
+        - {note: [Bb3, D4, F4, Ab4], dur: e, vel: 55}
+        - {note: [Ab3, C4, Eb4, Gb4], dur: e, vel: 85}
+        - {note: [Ab3, C4, Eb4, Gb4], dur: e, vel: 60}
+        - {note: [G3, B3, D4, F4], dur: e, vel: 90}
+        - {note: [G3, B3, D4, F4], dur: e, vel: 65}
+
+  # Hard swing — pronounced shuffle feel
+  shuffle_bass:
+    swing: 75
+    bars:
+      - - {note: C2, dur: e, vel: 95}
+        - {note: C3, dur: e, vel: 70}
+        - {note: Eb2, dur: e, vel: 90}
+        - {note: G2, dur: e, vel: 65}
+        - {note: C2, dur: q, vel: 100}
+        - {note: Bb1, dur: q, vel: 85}
+
+  # Swing drums — ride cymbal pattern with triplet feel
+  swing_drums:
+    swing: 67
+    bars:
+      - - {beat: 1, note: ride, dur: e, vel: 90}
+        - {beat: 1.5, note: ride, dur: e, vel: 55}
+        - {beat: 2, note: ride, dur: e, vel: 80}
+        - {beat: 2, note: snare, dur: q, vel: 40}
+        - {beat: 2.5, note: ride, dur: e, vel: 55}
+        - {beat: 3, note: ride, dur: e, vel: 90}
+        - {beat: 3.5, note: ride, dur: e, vel: 55}
+        - {beat: 4, note: ride, dur: e, vel: 80}
+        - {beat: 4, note: snare, dur: q, vel: 40}
+        - {beat: 4.5, note: ride, dur: e, vel: 55}
+
+arrangement:
+  - name: "Straight"
+    repeat: 2
+    patterns:
+      piano: straight_comping
+
+  - name: "Jazz Swing"
+    repeat: 4
+    patterns:
+      piano: jazz_comping
+      bass: shuffle_bass
+      drums: swing_drums

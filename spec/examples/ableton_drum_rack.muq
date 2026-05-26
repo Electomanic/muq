@@ -1,0 +1,74 @@
+# ableton_drum_rack.muq — Per-track drum_map for custom kit mapping
+# Demonstrates overriding the default GM drum map with a custom mapping,
+# e.g. matching an Ableton Drum Rack or sample-based kit.
+
+song:
+  title: "Custom Drum Rack"
+  tempo: 128
+  time: 4/4
+
+# Global drum_map is NOT used here — the per-track map takes precedence.
+
+tracks:
+  kit:
+    instrument: standard
+    channel: 10
+    drum_map:
+      kick:      36
+      snare:     38
+      rimshot:   37
+      clap:      39
+      hh:        42
+      hh_open:   46
+      crash:     49
+      ride:      51
+      tom_hi:    48
+      tom_mid:   47
+      tom_lo:    45
+      shaker:    70
+      conga:     63
+      cowbell:   56
+      perc_1:    60
+      perc_2:    61
+
+patterns:
+  four_on_floor:
+    bars:
+      - - {beat: 1, note: kick,  dur: q, vel: 110}
+        - {beat: 1, note: hh,    dur: e, vel: 75}
+        - {beat: 1.5, note: hh,  dur: e, vel: 55}
+        - {beat: 2, note: kick,  dur: q, vel: 100}
+        - {beat: 2, note: clap,  dur: q, vel: 105}
+        - {beat: 2, note: hh,    dur: e, vel: 75}
+        - {beat: 2.5, note: hh,  dur: e, vel: 55}
+        - {beat: 3, note: kick,  dur: q, vel: 110}
+        - {beat: 3, note: hh,    dur: e, vel: 75}
+        - {beat: 3.5, note: hh_open, dur: e, vel: 65}
+        - {beat: 4, note: kick,  dur: q, vel: 100}
+        - {beat: 4, note: clap,  dur: q, vel: 100}
+        - {beat: 4, note: hh,    dur: e, vel: 75}
+        - {beat: 4.5, note: shaker, dur: e, vel: 50}
+
+  fill:
+    bars:
+      - - {beat: 1, note: kick,   dur: q, vel: 110}
+        - {beat: 1, note: crash,  dur: q, vel: 100}
+        - {beat: 2, note: snare,  dur: e, vel: 95}
+        - {beat: 2.5, note: snare, dur: e, vel: 90}
+        - {beat: 3, note: tom_hi, dur: e, vel: 100}
+        - {beat: 3.5, note: tom_mid, dur: e, vel: 95}
+        - {beat: 4, note: tom_lo, dur: e, vel: 100}
+        - {beat: 4.5, note: kick, dur: e, vel: 110}
+
+arrangement:
+  - name: "Main"
+    repeat: 3
+    patterns:
+      kit: four_on_floor
+  - name: "Fill"
+    patterns:
+      kit: fill
+  - name: "Main"
+    repeat: 4
+    patterns:
+      kit: four_on_floor

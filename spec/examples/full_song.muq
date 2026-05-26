@@ -1,0 +1,223 @@
+# full_song.muq — Complete song demonstrating all muq features
+# Features: multiple tracks, pattern reuse, automation, tempo events,
+# tie_across, microtiming, drum_map, scale_mode, numeric durations.
+
+song:
+  title: "Everything Demo"
+  artist: "muq"
+  tempo: 120
+  time: 4/4
+  key: C minor
+  scale_mode: warn
+
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+  bass:
+    instrument: electric_bass_finger
+    channel: 2
+  synth:
+    instrument: pad_polysynth
+    channel: 3
+  lead:
+    instrument: lead_square
+    channel: 4
+
+patterns:
+  # ---- DRUM PATTERNS ----
+  verse_beat:
+    bars:
+      - - {beat: 1, note: kick,  dur: q, vel: 100}
+        - {beat: 1, note: hh,    dur: e, vel: 65, offset_beats: 0.01}
+        - {beat: 1.5, note: hh,  dur: e, vel: 50, offset_beats: 0.015}
+        - {beat: 2, note: snare, dur: q, vel: 95}
+        - {beat: 2, note: hh,    dur: e, vel: 65, offset_beats: 0.01}
+        - {beat: 2.5, note: hh,  dur: e, vel: 50, offset_beats: 0.015}
+        - {beat: 3, note: kick,  dur: e, vel: 95}
+        - {beat: 3, note: hh,    dur: e, vel: 65, offset_beats: 0.01}
+        - {beat: 3.5, note: kick, dur: e, vel: 85}
+        - {beat: 3.5, note: hh,  dur: e, vel: 50, offset_beats: 0.015}
+        - {beat: 4, note: snare, dur: q, vel: 100}
+        - {beat: 4, note: hh,    dur: e, vel: 65, offset_beats: 0.01}
+        - {beat: 4.5, note: hh,  dur: e, vel: 50, offset_beats: 0.015}
+
+  chorus_beat:
+    bars:
+      - - {beat: 1, note: kick,     dur: q, vel: 115}
+        - {beat: 1, note: crash,    dur: q, vel: 90}
+        - {beat: 1.5, note: hh,     dur: e, vel: 60}
+        - {beat: 2, note: snare,    dur: q, vel: 110}
+        - {beat: 2.5, note: hh,     dur: e, vel: 60}
+        - {beat: 3, note: kick,     dur: q, vel: 110}
+        - {beat: 3.5, note: hh,     dur: e, vel: 60}
+        - {beat: 4, note: snare,    dur: q, vel: 110}
+        - {beat: 4, note: hh_open,  dur: e, vel: 70}
+
+  fill_4:
+    bars:
+      - - {beat: 1, note: kick,    dur: e, vel: 110}
+        - {beat: 1, note: crash,   dur: q, vel: 95}
+        - {beat: 2, note: snare,   dur: e, vel: 90}
+        - {beat: 2.5, note: snare, dur: e, vel: 85}
+        - {beat: 3, note: high_tom,  dur: e, vel: 100}
+        - {beat: 3.5, note: hi_mid_tom, dur: e, vel: 95}
+        - {beat: 4, note: low_mid_tom,  dur: e, vel: 100}
+        - {beat: 4.5, note: kick,  dur: e, vel: 110}
+
+  # ---- BASS PATTERNS ----
+  verse_bass:
+    bars:
+      - - {note: C2, dur: e, vel: 90, offset_beats: 0.02}
+        - {note: C2, dur: e, vel: 75, offset_beats: 0.02}
+        - {note: Eb2, dur: e, vel: 85}
+        - {note: G2, dur: e, vel: 80}
+        - {note: C3, dur: q, vel: 90, offset_beats: 0.015}
+        - {note: G2, dur: q, vel: 80}
+      - - {note: Ab1, dur: e, vel: 90, offset_beats: 0.02}
+        - {note: Ab1, dur: e, vel: 75, offset_beats: 0.02}
+        - {note: Eb2, dur: q, vel: 85}
+        - {note: Bb1, dur: h, vel: 80}
+
+  chorus_bass:
+    bars:
+      - - {note: C2, dur: q, vel: 100}
+        - {note: C2, dur: e, vel: 85}
+        - {note: Eb2, dur: e, vel: 90}
+        - {note: G2, dur: q, vel: 95}
+        - {note: Bb2, dur: q, vel: 90, tie: true}
+      - - {note: Bb2, dur: q, vel: 90}
+        - {note: Ab2, dur: q, vel: 90}
+        - {note: G2, dur: h, vel: 85}
+
+  # ---- SYNTH PAD PATTERNS ----
+  pad_verse:
+    bars:
+      - - {note: [C4, Eb4, G4], dur: w, vel: 55}
+      - - {note: [Ab3, C4, Eb4], dur: w, vel: 55}
+
+  pad_chorus:
+    bars:
+      - - {note: [C4, Eb4, G4, Bb4], dur: w, vel: 70}
+      - - {note: [Ab3, C4, Eb4, G4], dur: w, vel: 70}
+
+  # ---- LEAD PATTERNS ----
+  lead_melody:
+    bars:
+      - - {rest: h}
+        - {note: G4, dur: e, vel: 95}
+        - {note: Bb4, dur: e, vel: 90}
+        - {note: C5, dur: q, vel: 100}
+      - - {note: Bb4, dur: q, vel: 90}
+        - {note: G4, dur: q, vel: 85}
+        - {note: Eb4, dur: h, vel: 80}
+
+  # ---- AUTOMATION PATTERNS ----
+  filter_sweep:
+    bars:
+      - - {beat: 1, cc: 74, value: 30}
+        - {beat: 3, cc: 74, value: 100, interp: linear}
+      - - {beat: 1, cc: 74, value: 100}
+        - {beat: 4, cc: 74, value: 40, interp: linear}
+
+  lead_vibrato:
+    bars:
+      - - {beat: 1, cc: 1, value: 0}
+        - {beat: 3, cc: 1, value: 80, interp: linear}
+      - - {beat: 1, cc: 1, value: 80}
+        - {beat: 3, cc: 1, value: 0, interp: linear}
+
+  bend_up:
+    bars:
+      - - {beat: 1, pitch_bend: 0}
+        - {beat: 3, pitch_bend: 4096, interp: linear}
+        - {beat: 4, pitch_bend: 0, interp: linear}
+
+  # ---- NUMERIC DURATION PATTERN ----
+  triplet_bass:
+    bars:
+      # Triplet eighths using numeric durations: 1/3 beat each
+      - - {note: C2, dur_beats: 0.333333, vel: 90}
+        - {note: Eb2, dur_beats: 0.333333, vel: 85}
+        - {note: G2, dur_beats: 0.333334, vel: 80}
+        - {note: C3, dur: q, vel: 95}
+        - {note: G2, dur: q, vel: 85}
+        - {note: C2, dur: q, vel: 90}
+
+arrangement:
+  # ---- INTRO (4 bars, fade in) ----
+  - name: "Intro"
+    repeat: 2
+    patterns:
+      synth: pad_verse
+      bass: verse_bass
+
+  # ---- VERSE 1 (4 bars) ----
+  - name: "Verse 1"
+    repeat: 2
+    patterns:
+      drums: verse_beat
+      bass: verse_bass
+      synth: pad_verse
+
+  # ---- PRE-CHORUS (2 bars, filter sweep + fill) ----
+  - name: "Pre-Chorus"
+    patterns:
+      drums: verse_beat
+      bass: verse_bass
+      synth: pad_verse
+      lead: filter_sweep
+  - name: "Pre-Chorus Fill"
+    tie_across: true
+    patterns:
+      drums: fill_4
+      bass: verse_bass
+      synth: pad_verse
+
+  # ---- CHORUS (4 bars) ----
+  - name: "Chorus"
+    tempo: 122
+    repeat: 2
+    patterns:
+      drums: chorus_beat
+      bass: chorus_bass
+      synth: pad_chorus
+      lead: lead_melody
+
+  # ---- VERSE 2 (4 bars, with automation) ----
+  - name: "Verse 2"
+    tempo: 120
+    repeat: 2
+    patterns:
+      drums: verse_beat
+      bass: verse_bass
+      synth: pad_verse
+      lead: filter_sweep
+
+  # ---- CHORUS 2 (4 bars, with vibrato and bend) ----
+  - name: "Chorus 2"
+    tempo: 122
+    repeat: 2
+    patterns:
+      drums: chorus_beat
+      bass: chorus_bass
+      synth: pad_chorus
+      lead: lead_melody
+
+  # ---- BRIDGE (2 bars, ritardando) ----
+  - name: "Bridge"
+    tempo: 122
+    tempo_events:
+      - {bar: 1, beat: 1, tempo: 122}
+      - {bar: 2, beat: 1, tempo: 110, interp: linear}
+    patterns:
+      bass: chorus_bass
+      synth: pad_chorus
+
+  # ---- OUTRO (2 bars, triplet bass) ----
+  - name: "Outro"
+    tempo: 110
+    patterns:
+      drums: verse_beat
+      bass: triplet_bass
+      synth: pad_verse

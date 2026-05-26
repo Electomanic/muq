@@ -1,0 +1,84 @@
+# Thirty-second notes — demonstrates the 'x' duration token
+# and its modifiers (xd, xdd, xt).
+
+song:
+  title: "32nd Note Demo"
+  tempo: 80
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+  strings:
+    instrument: string_ensemble_1
+    channel: 2
+
+patterns:
+  # Classical-style 32nd note run
+  scalar_run:
+    bars:
+      - - {note: C4, dur: x}
+        - {note: D4, dur: x}
+        - {note: E4, dur: x}
+        - {note: F4, dur: x}
+        - {note: G4, dur: x}
+        - {note: A4, dur: x}
+        - {note: B4, dur: x}
+        - {note: C5, dur: x}
+        - {note: D5, dur: x}
+        - {note: E5, dur: x}
+        - {note: F5, dur: x}
+        - {note: G5, dur: x}
+        - {note: A5, dur: x}
+        - {note: B5, dur: x}
+        - {note: C6, dur: x}
+        - {note: D6, dur: x}
+        # 16 thirty-seconds = 2 beats; fill remaining 2 beats
+        - {note: E6, dur: h}
+
+  # Dotted 32nd (xd = 0.1875 beats) for uneven rhythmic groupings
+  dotted_32nds:
+    bars:
+      - - {note: E5, dur: xd}
+        - {note: D5, dur: xd}
+        - {note: C5, dur: xd}
+        - {note: B4, dur: xd}
+        - {note: A4, dur: q}
+        - {rest: qd}
+        - {note: G4, dur: e}
+
+  # Tremolo using alternating 32nd notes
+  tremolo:
+    bars:
+      - - {note: A4, dur: x}
+        - {note: E5, dur: x}
+        - {note: A4, dur: x}
+        - {note: E5, dur: x}
+        - {note: A4, dur: x}
+        - {note: E5, dur: x}
+        - {note: A4, dur: x}
+        - {note: E5, dur: x}
+        - {note: A4, dur: x}
+        - {note: E5, dur: x}
+        - {note: A4, dur: x}
+        - {note: E5, dur: x}
+        - {note: A4, dur: x}
+        - {note: E5, dur: x}
+        - {note: A4, dur: x}
+        - {note: E5, dur: x}
+        - {note: A4, dur: h}
+
+arrangement:
+  - name: "Scalar Run"
+    patterns:
+      piano: scalar_run
+
+  - name: "Dotted 32nds"
+    patterns:
+      piano: dotted_32nds
+
+  - name: "Tremolo"
+    repeat: 4
+    patterns:
+      strings: tremolo

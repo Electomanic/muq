@@ -1,0 +1,21 @@
+# Minimal valid .muq file — the smallest possible document.
+# Demonstrates: required keys only, single track, single pattern, single section.
+
+song:
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  melody:
+    bars:
+      - - {note: C4, dur: w}
+
+arrangement:
+  - name: main
+    patterns:
+      piano: melody

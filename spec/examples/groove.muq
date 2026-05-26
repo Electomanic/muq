@@ -1,0 +1,49 @@
+# groove.muq — Microtiming / offset_beats showcase
+# Demonstrates push/pull groove on a drum pattern and bass line.
+
+song:
+  title: "Groove Demo"
+  tempo: 95
+  time: 4/4
+
+tracks:
+  drums:
+    instrument: standard_kit
+    channel: 10
+  bass:
+    instrument: electric_bass_finger
+    channel: 2
+
+patterns:
+  groove_beat:
+    bars:
+      # Bar 1 — pushed hi-hats, dragged snare
+      - - {beat: 1,   note: kick,  dur: q, vel: 110}
+        - {beat: 1,   note: hh,    dur: e, vel: 70}
+        - {beat: 1.5, note: hh,    dur: e, vel: 55, offset_beats: 0.02}
+        - {beat: 2,   note: snare, dur: q, vel: 100, offset_beats: -0.015}
+        - {beat: 2,   note: hh,    dur: e, vel: 70}
+        - {beat: 2.5, note: hh,    dur: e, vel: 55, offset_beats: 0.02}
+        - {beat: 3,   note: kick,  dur: q, vel: 100}
+        - {beat: 3,   note: hh,    dur: e, vel: 70}
+        - {beat: 3.5, note: hh,    dur: e, vel: 55, offset_beats: 0.02}
+        - {beat: 4,   note: snare, dur: q, vel: 105, offset_beats: -0.015}
+        - {beat: 4,   note: hh,    dur: e, vel: 70}
+        - {beat: 4.5, note: hh,    dur: e, vel: 55, offset_beats: 0.02}
+
+  laid_back_bass:
+    bars:
+      # Bar 1 — slightly behind the beat for a laid-back feel
+      - - {note: E2, dur: e, vel: 90, offset_beats: 0.025}
+        - {note: E2, dur: e, vel: 75, offset_beats: 0.025}
+        - {note: G2, dur: e, vel: 85, offset_beats: 0.02}
+        - {note: A2, dur: e, vel: 80, offset_beats: 0.02}
+        - {note: B2, dur: q, vel: 95, offset_beats: 0.015}
+        - {note: E2, dur: q, vel: 90, offset_beats: 0.025}
+
+arrangement:
+  - name: "Groove loop"
+    repeat: 4
+    patterns:
+      drums: groove_beat
+      bass: laid_back_bass

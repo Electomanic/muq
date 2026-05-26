@@ -1,0 +1,87 @@
+# Lofi hip-hop — demonstrates swing, microtiming, and
+# automation for a modern production style.
+
+song:
+  title: "Late Night Lofi"
+  tempo: 85
+  time: 4/4
+  key: Eb minor
+
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+  keys:
+    instrument: electric_piano_1
+    channel: 1
+    volume: 75
+    pan: 55
+  bass:
+    instrument: electric_bass_finger
+    channel: 2
+
+patterns:
+  lofi_drums:
+    swing: 62
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 100}
+        - {beat: 1, note: hh, dur: e, vel: 50, offset_beats: 0.02}
+        - {beat: 1.5, note: hh, dur: e, vel: 38}
+        - {beat: 2, note: snare, dur: q, vel: 75, offset_beats: -0.01}
+        - {beat: 2, note: hh, dur: e, vel: 50, offset_beats: 0.02}
+        - {beat: 2.5, note: hh, dur: e, vel: 35}
+        - {beat: 3, note: kick, dur: e, vel: 90}
+        - {beat: 3, note: hh, dur: e, vel: 50, offset_beats: 0.02}
+        - {beat: 3.5, note: kick, dur: e, vel: 80, offset_beats: 0.03}
+        - {beat: 3.5, note: hh, dur: e, vel: 38}
+        - {beat: 4, note: snare, dur: q, vel: 80, offset_beats: -0.01}
+        - {beat: 4, note: hh, dur: e, vel: 50, offset_beats: 0.02}
+        - {beat: 4.5, note: hh, dur: e, vel: 35}
+
+  lofi_keys:
+    swing: 62
+    bars:
+      - - {note: [Eb4, Gb4, Bb4], dur: qd, vel: 55, offset_beats: 0.03}
+        - {rest: e}
+        - {note: [Db4, F4, Ab4], dur: q, vel: 50, offset_beats: 0.02}
+        - {note: [Db4, F4, Ab4], dur: q, vel: 45}
+      - - {note: [Cb4, Eb4, Gb4], dur: h, vel: 50, offset_beats: 0.025}
+        - {rest: h}
+
+  lofi_bass:
+    swing: 62
+    bars:
+      - - {note: Eb2, dur: e, vel: 85, offset_beats: 0.025}
+        - {note: Eb2, dur: e, vel: 65, offset_beats: 0.02}
+        - {note: Gb2, dur: e, vel: 80}
+        - {note: Ab2, dur: e, vel: 70, offset_beats: 0.015}
+        - {note: Bb2, dur: q, vel: 85, offset_beats: 0.02}
+        - {note: Eb2, dur: q, vel: 80, offset_beats: 0.025}
+      - - {note: Db2, dur: e, vel: 85, offset_beats: 0.025}
+        - {note: Db2, dur: e, vel: 65, offset_beats: 0.02}
+        - {note: Ab2, dur: q, vel: 80}
+        - {note: Bb1, dur: h, vel: 75}
+
+  filter_lfo:
+    bars:
+      - - {beat: 1, cc: 74, value: 40}
+        - {beat: 2, cc: 74, value: 70, interp: linear}
+        - {beat: 3, cc: 74, value: 50, interp: linear}
+        - {beat: 4, cc: 74, value: 80, interp: linear}
+      - - {beat: 1, cc: 74, value: 60}
+        - {beat: 3, cc: 74, value: 30, interp: linear}
+
+arrangement:
+  - name: "Loop A"
+    repeat: 4
+    patterns:
+      drums: lofi_drums
+      keys: lofi_keys
+      bass: lofi_bass
+
+  - name: "Loop B (filtered)"
+    repeat: 4
+    patterns:
+      drums: lofi_drums
+      keys: filter_lfo
+      bass: lofi_bass

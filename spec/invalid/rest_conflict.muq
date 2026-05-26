@@ -1,0 +1,23 @@
+# INVALID: Rest conflict — event has both rest and rest_beats.
+# The spec requires exactly one of rest or rest_beats, not both.
+#
+# Expected error: REST_CONFLICT
+
+song:
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  conflict:
+    bars:
+      - - {rest: q, rest_beats: 1.0}
+
+arrangement:
+  - name: test
+    patterns:
+      piano: conflict

@@ -1,0 +1,116 @@
+# Drum patterns — demonstrates beat-addressed drum events,
+# named drum hits, velocity dynamics, and custom drum_map.
+
+song:
+  title: Drum Patterns
+  tempo: 95
+  time: 4/4
+
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+    volume: 100
+
+drum_map:
+  ghost: 38
+  cross_stick: 37
+
+patterns:
+  # Basic rock beat
+  rock_basic:
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 100}
+        - {beat: 1, note: hh, dur: e, vel: 80}
+        - {beat: 1.5, note: hh, dur: e, vel: 60}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 2, note: hh, dur: e, vel: 80}
+        - {beat: 2.5, note: hh, dur: e, vel: 60}
+        - {beat: 3, note: kick, dur: q, vel: 100}
+        - {beat: 3, note: hh, dur: e, vel: 80}
+        - {beat: 3.5, note: hh, dur: e, vel: 60}
+        - {beat: 4, note: snare, dur: q, vel: 100}
+        - {beat: 4, note: hh, dur: e, vel: 80}
+        - {beat: 4.5, note: hh, dur: e, vel: 60}
+
+  # Funk groove with ghost notes
+  funk_groove:
+    bars:
+      - - {beat: 1, note: kick, dur: e, vel: 110}
+        - {beat: 1, note: hh, dur: e, vel: 90}
+        - {beat: 1.5, note: ghost, dur: e, vel: 30}
+        - {beat: 1.5, note: hh, dur: e, vel: 70}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 2, note: hh, dur: e, vel: 90}
+        - {beat: 2.5, note: hh, dur: e, vel: 70}
+        - {beat: 2.75, note: kick, dur: s, vel: 90}
+        - {beat: 3, note: kick, dur: e, vel: 100}
+        - {beat: 3, note: hh_open, dur: e, vel: 90}
+        - {beat: 3.5, note: ghost, dur: e, vel: 35}
+        - {beat: 3.5, note: hh, dur: e, vel: 70}
+        - {beat: 4, note: snare, dur: q, vel: 110}
+        - {beat: 4, note: hh, dur: e, vel: 90}
+        - {beat: 4.5, note: ghost, dur: e, vel: 25}
+        - {beat: 4.5, note: hh, dur: e, vel: 70}
+        - {beat: 4.75, note: kick, dur: s, vel: 80}
+
+  # Half-time shuffle
+  half_time:
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 100}
+        - {beat: 1, note: hh, dur: et, vel: 85}
+        - {beat: 1.3333, note: hh, dur: et, vel: 50}
+        - {beat: 1.6667, note: hh, dur: et, vel: 70}
+        - {beat: 2, note: hh, dur: et, vel: 85}
+        - {beat: 2.3333, note: hh, dur: et, vel: 50}
+        - {beat: 2.6667, note: hh, dur: et, vel: 70}
+        - {beat: 3, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: hh, dur: et, vel: 85}
+        - {beat: 3.3333, note: hh, dur: et, vel: 50}
+        - {beat: 3.6667, note: hh, dur: et, vel: 70}
+        - {beat: 4, note: hh, dur: et, vel: 85}
+        - {beat: 4.3333, note: kick, dur: et, vel: 80}
+        - {beat: 4.3333, note: hh, dur: et, vel: 50}
+        - {beat: 4.6667, note: hh, dur: et, vel: 70}
+
+  # Four-bar fill
+  fill_4bar:
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 100}
+        - {beat: 2, note: snare, dur: q, vel: 90}
+        - {beat: 3, note: snare, dur: e, vel: 80}
+        - {beat: 3.5, note: snare, dur: e, vel: 85}
+        - {beat: 4, note: tom1, dur: e, vel: 90}
+        - {beat: 4.5, note: tom2, dur: e, vel: 90}
+      - - {beat: 1, note: tom3, dur: e, vel: 90}
+        - {beat: 1.5, note: tom4, dur: e, vel: 90}
+        - {beat: 2, note: tom5, dur: e, vel: 85}
+        - {beat: 2.5, note: tom6, dur: e, vel: 85}
+        - {beat: 3, note: kick, dur: q, vel: 110}
+        - {beat: 3, note: crash, dur: q, vel: 120}
+        - {beat: 4, note: kick, dur: q, vel: 100}
+
+arrangement:
+  - name: rock
+    patterns:
+      drums: rock_basic
+    repeat: 4
+
+  - name: funk
+    patterns:
+      drums: funk_groove
+    repeat: 4
+
+  - name: shuffle
+    patterns:
+      drums: half_time
+    repeat: 4
+
+  - name: fill
+    patterns:
+      drums: fill_4bar
+
+  - name: end
+    patterns:
+      drums: rock_basic
+    repeat: 2

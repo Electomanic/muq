@@ -1,0 +1,169 @@
+# Full-featured .muq file — exercises every spec feature.
+# Demonstrates: all song keys, multiple tracks, beat-addressed and sequential modes,
+# chords, rests, ties, velocity, drum track, custom drum_map, arrangement with
+# repeats and tempo overrides.
+
+song:
+  title: Full Feature Demo
+  artist: muq Authors
+  tempo: 110
+  time: 4/4
+  key: G major
+  spec_version: "1.0.0"
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+    volume: 100
+    pan: center
+
+  strings:
+    instrument: string_ensemble_1
+    channel: 2
+    volume: 85
+    pan: 40
+
+  bass:
+    instrument: electric_bass_finger
+    channel: 3
+    volume: 95
+    pan: 64
+
+  drums:
+    instrument: standard
+    channel: 10
+    volume: 100
+
+drum_map:
+  ghost_snare: 38
+  shaker: 70
+
+patterns:
+  # Piano: beat-addressed chords with melody
+  piano_intro:
+    bars:
+      - - {beat: 1, note: [G3, B3, D4], dur: h, vel: 90}
+        - {beat: 3, note: [C4, E4, G4], dur: h, vel: 85}
+      - - {beat: 1, note: [D4, F#4, A4], dur: qd, vel: 95}
+        - {beat: 2.5, note: B4, dur: e}
+        - {beat: 3, note: [G3, B3, D4], dur: h}
+
+  # Piano: sequential melody with rests and ties
+  piano_verse:
+    bars:
+      - - {note: G4, dur: q, vel: 100}
+        - {note: A4, dur: q}
+        - {note: B4, dur: q, tie: true}
+        - {note: B4, dur: q}
+      - - {note: A4, dur: e}
+        - {note: G4, dur: e}
+        - {note: F#4, dur: q}
+        - {rest: q}
+        - {note: D4, dur: q}
+      - - {note: E4, dur: h}
+        - {rest: h}
+      - - {note: G4, dur: w}
+
+  # Strings: sustained chords (sequential)
+  strings_verse:
+    bars:
+      - - {note: [G3, B3, D4], dur: w, vel: 60}
+      - - {note: [D3, F#3, A3], dur: w, vel: 60}
+      - - {note: [C3, E3, G3], dur: w, vel: 55}
+      - - {note: [D3, F#3, A3], dur: w, vel: 65}
+
+  # Bass: sequential with rests
+  bass_verse:
+    bars:
+      - - {note: G2, dur: q}
+        - {rest: e}
+        - {note: G2, dur: e}
+        - {note: G2, dur: q}
+        - {rest: e}
+        - {note: B2, dur: e}
+      - - {note: D2, dur: q}
+        - {rest: e}
+        - {note: D2, dur: e}
+        - {note: A2, dur: q}
+        - {rest: e}
+        - {note: D2, dur: e}
+      - - {note: C2, dur: q}
+        - {note: C2, dur: q}
+        - {note: E2, dur: q}
+        - {note: G2, dur: q}
+      - - {note: D2, dur: h}
+        - {note: A1, dur: h}
+
+  # Drums: beat-addressed (overlapping hits)
+  drums_verse:
+    bars:
+      - - {beat: 1, note: kick, dur: q}
+        - {beat: 1, note: hh, dur: e}
+        - {beat: 1.5, note: hh, dur: e}
+        - {beat: 2, note: snare, dur: q}
+        - {beat: 2, note: hh, dur: e}
+        - {beat: 2.5, note: hh, dur: e}
+        - {beat: 3, note: kick, dur: q}
+        - {beat: 3, note: hh, dur: e}
+        - {beat: 3.5, note: hh, dur: e}
+        - {beat: 4, note: snare, dur: q, vel: 110}
+        - {beat: 4, note: hh_open, dur: e}
+        - {beat: 4.5, note: ghost_snare, dur: e, vel: 40}
+
+  # Drums: fill with toms and crash
+  drums_fill:
+    bars:
+      - - {beat: 1, note: snare, dur: e}
+        - {beat: 1.5, note: snare, dur: e}
+        - {beat: 2, note: tom1, dur: e}
+        - {beat: 2.5, note: tom2, dur: e}
+        - {beat: 3, note: tom3, dur: e}
+        - {beat: 3.5, note: tom4, dur: e}
+        - {beat: 4, note: tom5, dur: e}
+        - {beat: 4.5, note: tom6, dur: e}
+
+  # Drums: crash hit for transitions
+  drums_crash:
+    bars:
+      - - {beat: 1, note: crash, dur: q, vel: 120}
+        - {beat: 1, note: kick, dur: q, vel: 110}
+        - {beat: 2, note: hh, dur: e}
+        - {beat: 2.5, note: hh, dur: e}
+        - {beat: 3, note: kick, dur: q}
+        - {beat: 3, note: hh, dur: e}
+        - {beat: 3.5, note: hh, dur: e}
+        - {beat: 4, note: snare, dur: q}
+        - {beat: 4, note: hh, dur: e}
+
+arrangement:
+  - name: intro
+    patterns:
+      piano: piano_intro
+    repeat: 2
+
+  - name: verse_1
+    patterns:
+      piano: piano_verse
+      strings: strings_verse
+      bass: bass_verse
+      drums: drums_verse
+    repeat: 2
+
+  - name: fill
+    patterns:
+      drums: drums_fill
+
+  - name: verse_2
+    patterns:
+      piano: piano_verse
+      strings: strings_verse
+      bass: bass_verse
+      drums: drums_crash
+    repeat: 2
+
+  - name: outro
+    patterns:
+      piano: piano_intro
+    repeat: 2
+    tempo: 90

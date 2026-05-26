@@ -1,0 +1,17 @@
+# INVALID: Missing required top-level key 'song'.
+# Expected error: MISSING_REQUIRED_KEY — 'song' is required.
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  melody:
+    bars:
+      - - {note: C4, dur: q}
+
+arrangement:
+  - name: main
+    patterns:
+      piano: melody

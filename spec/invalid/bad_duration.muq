@@ -1,0 +1,26 @@
+# INVALID: Invalid duration tokens.
+# Expected errors:
+#   - INVALID_DURATION on 'x' (not a valid base duration)
+#   - INVALID_DURATION on 'qx' (not a valid modifier)
+#   - INVALID_DURATION on 'qddt' (cannot combine dotted and triplet)
+
+song:
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  bad_durations:
+    bars:
+      - - {note: C4, dur: x}
+      - - {note: D4, dur: qx}
+      - - {note: E4, dur: qddt}
+
+arrangement:
+  - name: main
+    patterns:
+      piano: bad_durations

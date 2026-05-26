@@ -1,0 +1,81 @@
+# Articulations example — demonstrates all 7 articulation types
+
+song:
+  title: "Articulation Demo"
+  tempo: 100
+  time: 4/4
+
+tracks:
+  strings:
+    instrument: string_ensemble_1
+    channel: 1
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 2
+
+patterns:
+  # Staccato vs legato contrast
+  staccato_legato:
+    bars:
+      # Staccato: short, detached (gate ×0.5)
+      - - {note: C4, dur: q, vel: 80, articulation: staccato}
+        - {note: E4, dur: q, vel: 80, articulation: staccato}
+        - {note: G4, dur: q, vel: 80, articulation: staccato}
+        - {note: C5, dur: q, vel: 80, articulation: staccato}
+      # Legato: full duration, smooth (gate ×1.0)
+      - - {note: C4, dur: q, vel: 80, articulation: legato}
+        - {note: E4, dur: q, vel: 80, articulation: legato}
+        - {note: G4, dur: q, vel: 80, articulation: legato}
+        - {note: C5, dur: q, vel: 80, articulation: legato}
+
+  # All articulations on a single pitch
+  all_articulations:
+    bars:
+      - - {note: C4, dur: q, vel: 80, articulation: staccato}
+        - {note: C4, dur: q, vel: 80, articulation: staccatissimo}
+        - {note: C4, dur: q, vel: 80, articulation: legato}
+        - {note: C4, dur: q, vel: 80, articulation: tenuto}
+      - - {note: C4, dur: q, vel: 80, articulation: accent}
+        - {note: C4, dur: q, vel: 80, articulation: marcato}
+        - {note: C4, dur: q, vel: 80, articulation: portato}
+        - {note: C4, dur: q, vel: 80}
+
+  # Mixed articulations in a melodic phrase
+  expressive_melody:
+    bars:
+      - - {note: C5, dur: e, vel: 90, articulation: accent}
+        - {note: D5, dur: e, vel: 75, articulation: staccato}
+        - {note: E5, dur: q, vel: 85, articulation: legato}
+        - {note: F5, dur: q, vel: 85, articulation: legato}
+      - - {note: G5, dur: e, vel: 95, articulation: marcato}
+        - {note: F5, dur: e, vel: 70, articulation: portato}
+        - {note: E5, dur: q, vel: 80, articulation: tenuto}
+        - {note: D5, dur: q, vel: 75, articulation: staccatissimo}
+      - - {note: C5, dur: w, vel: 90, articulation: legato}
+
+  # Chords with articulations
+  chord_accents:
+    bars:
+      - - {note: [C4, E4, G4], dur: q, vel: 100, articulation: accent}
+        - {note: [C4, E4, G4], dur: q, vel: 70, articulation: staccato}
+        - {note: [F4, A4, C5], dur: q, vel: 100, articulation: accent}
+        - {note: [F4, A4, C5], dur: q, vel: 70, articulation: staccato}
+      - - {note: [G4, B4, D5], dur: q, vel: 110, articulation: marcato}
+        - {rest: q}
+        - {note: [G4, B4, D5], dur: h, vel: 85, articulation: tenuto}
+
+arrangement:
+  - name: "Staccato vs Legato"
+    repeat: 2
+    patterns:
+      strings: staccato_legato
+
+  - name: "All Articulations"
+    patterns:
+      piano: all_articulations
+
+  - name: "Expressive Melody"
+    repeat: 2
+    patterns:
+      strings: expressive_melody
+      piano: chord_accents

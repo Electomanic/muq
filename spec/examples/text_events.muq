@@ -1,0 +1,63 @@
+# text_events.muq — Demonstrates lyrics, chord symbols, and rehearsal marks
+
+song:
+  title: "Text Events Demo"
+  tempo: 100
+  time: 4/4
+
+tracks:
+  vocal:
+    instrument: acoustic_grand_piano
+    channel: 1
+  guitar:
+    instrument: acoustic_guitar_nylon
+    channel: 2
+
+patterns:
+  verse_vocal:
+    bars:
+      # Bar 1 — lyrics + chord symbols + rehearsal mark
+      - - {beat: 1, text: "A", type: rehearsal}
+        - {beat: 1, text: "Am", type: chord}
+        - {beat: 1, text: "Hel-", type: lyric}
+        - {note: A3, dur: q, vel: 75}
+        - {beat: 2, text: "-lo", type: lyric}
+        - {note: C4, dur: q, vel: 80}
+        - {beat: 3, text: "C", type: chord}
+        - {beat: 3, text: "world", type: lyric}
+        - {note: E4, dur: h, vel: 85}
+      # Bar 2
+      - - {beat: 1, text: "F", type: chord}
+        - {beat: 1, text: "I'm", type: lyric}
+        - {note: F4, dur: q, vel: 80}
+        - {beat: 2, text: "here", type: lyric}
+        - {note: E4, dur: qd, vel: 75}
+        - {beat: 3, text: "G", type: chord}
+        - {rest: e}
+        - {note: D4, dur: q, vel: 70}
+
+  verse_guitar:
+    bars:
+      - - {note: [A2, E3, A3, C4, E4], dur: h, vel: 60}
+        - {note: [C3, E3, G3, C4, E4], dur: h, vel: 60}
+      - - {note: [F2, A2, C3, F3], dur: h, vel: 60}
+        - {note: [G2, B2, D3, G3], dur: h, vel: 60}
+
+  marker_pattern:
+    bars:
+      - - {beat: 1, text: "Solo begins", type: marker}
+        - {note: A4, dur: e, vel: 95}
+        - {note: C5, dur: e, vel: 90}
+        - {note: E5, dur: q, vel: 100}
+        - {note: D5, dur: q, vel: 85}
+        - {note: C5, dur: q, vel: 80}
+
+arrangement:
+  - name: "Verse"
+    repeat: 2
+    patterns:
+      vocal: verse_vocal
+      guitar: verse_guitar
+  - name: "Solo"
+    patterns:
+      guitar: marker_pattern

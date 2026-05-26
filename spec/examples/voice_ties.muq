@@ -1,0 +1,31 @@
+# voice_ties.muq — Demonstrates polyphonic tie disambiguation with voice key
+
+song:
+  title: "Voice Disambiguation"
+  tempo: 72
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  polyphonic_passage:
+    bars:
+      # Two independent voices on the same pitch (C4), each tied separately
+      - - {beat: 1, note: C4, dur: h, vel: 70, tie: true, voice: 1}
+        - {beat: 1, note: E4, dur: q, vel: 65}
+        - {beat: 1, note: G4, dur: q, vel: 65}
+        - {beat: 2, note: C4, dur: q, vel: 55, tie: true, voice: 2}
+        - {beat: 3, note: C4, dur: h, voice: 1}
+        - {beat: 3, note: C4, dur: q, voice: 2}
+        - {beat: 4, note: E4, dur: q, vel: 65}
+      # Without voice — uses default pitch-matching (simpler polyphony)
+      - - {beat: 1, note: [C4, E4, G4], dur: h, vel: 70, tie: true}
+        - {beat: 3, note: [C4, E4, G4], dur: h, vel: 65}
+
+arrangement:
+  - name: "Polyphonic Demo"
+    patterns:
+      piano: polyphonic_passage

@@ -1,0 +1,78 @@
+# Waltz — demonstrates 3/4 time with expressive articulations
+# and voice ties in a classical style.
+
+song:
+  title: "Simple Waltz"
+  tempo: 144
+  time: 3/4
+  key: G major
+
+tracks:
+  melody:
+    instrument: violin
+    channel: 1
+    volume: 100
+    pan: 70
+  accompaniment:
+    instrument: acoustic_grand_piano
+    channel: 2
+    volume: 85
+    pan: 58
+
+patterns:
+  waltz_melody_a:
+    bars:
+      - - {note: D5, dur: qd, vel: 90, articulation: legato}
+        - {note: E5, dur: e, vel: 75, articulation: legato}
+        - {note: D5, dur: q, vel: 85}
+      - - {note: B4, dur: hd, vel: 80, articulation: tenuto}
+      - - {note: C5, dur: qd, vel: 85, articulation: legato}
+        - {note: D5, dur: e, vel: 70, articulation: legato}
+        - {note: E5, dur: q, vel: 80}
+      - - {note: D5, dur: h, vel: 85, tie: true}
+        - {note: D5, dur: q, vel: 85}
+
+  waltz_melody_b:
+    bars:
+      - - {note: G5, dur: q, vel: 100, articulation: accent}
+        - {note: F#5, dur: e, vel: 75, articulation: staccato}
+        - {note: E5, dur: e, vel: 70, articulation: staccato}
+        - {note: D5, dur: q, vel: 80}
+      - - {note: C5, dur: q, vel: 85, articulation: legato}
+        - {note: B4, dur: q, vel: 80, articulation: legato}
+        - {note: A4, dur: q, vel: 75}
+      - - {note: B4, dur: hd, vel: 90, articulation: tenuto}
+      - - {rest: hd}
+
+  # Oom-pah-pah waltz pattern
+  waltz_accompaniment:
+    bars:
+      - - {note: G2, dur: q, vel: 80}
+        - {note: [B3, D4], dur: q, vel: 55, articulation: staccato}
+        - {note: [B3, D4], dur: q, vel: 50, articulation: staccato}
+      - - {note: G2, dur: q, vel: 75}
+        - {note: [B3, D4], dur: q, vel: 55, articulation: staccato}
+        - {note: [B3, D4], dur: q, vel: 50, articulation: staccato}
+      - - {note: C3, dur: q, vel: 80}
+        - {note: [E3, G3], dur: q, vel: 55, articulation: staccato}
+        - {note: [E3, G3], dur: q, vel: 50, articulation: staccato}
+      - - {note: D3, dur: q, vel: 85}
+        - {note: [F#3, A3], dur: q, vel: 55, articulation: staccato}
+        - {note: [F#3, A3], dur: q, vel: 50, articulation: staccato}
+
+arrangement:
+  - name: "A Section"
+    repeat: 2
+    patterns:
+      melody: waltz_melody_a
+      accompaniment: waltz_accompaniment
+
+  - name: "B Section"
+    patterns:
+      melody: waltz_melody_b
+      accompaniment: waltz_accompaniment
+
+  - name: "A Reprise"
+    patterns:
+      melody: waltz_melody_a
+      accompaniment: waltz_accompaniment

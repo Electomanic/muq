@@ -1,0 +1,72 @@
+# Tie across — demonstrates tied notes carrying across section boundaries
+# using tie_across: true on arrangement sections.
+
+song:
+  title: Sustained Transition
+  tempo: 80
+  time: 4/4
+  key: D minor
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+  strings:
+    instrument: string_ensemble_1
+    channel: 2
+    volume: 75
+
+patterns:
+  # Verse ending: last note is tied
+  verse_piano:
+    bars:
+      - - {note: D4, dur: q}
+        - {note: F4, dur: q}
+        - {note: A4, dur: h}
+      - - {note: G4, dur: q}
+        - {note: F4, dur: q}
+        - {note: D4, dur: h, tie: true}
+
+  # Chorus starting: first note matches the tied pitch
+  chorus_piano:
+    bars:
+      - - {note: D4, dur: w, vel: 100}
+      - - {note: C4, dur: q}
+        - {note: D4, dur: q}
+        - {note: F4, dur: h}
+
+  # Strings sustain across both sections
+  strings_verse:
+    bars:
+      - - {note: [D3, A3], dur: w, vel: 60}
+      - - {note: [D3, A3], dur: h, vel: 60, tie: true}
+        - {note: [D3, A3], dur: h, tie: true}
+
+  strings_chorus:
+    bars:
+      - - {note: [D3, A3], dur: w, vel: 70}
+      - - {note: [F3, C4], dur: w, vel: 70}
+
+arrangement:
+  # Verse: tie_across = true so the tied D4 carries into chorus
+  - name: verse
+    patterns:
+      piano: verse_piano
+      strings: strings_verse
+    tie_across: true
+    repeat: 2
+
+  # Chorus: the first D4 continues the sustain from the verse
+  - name: chorus
+    patterns:
+      piano: chorus_piano
+      strings: strings_chorus
+    repeat: 2
+
+  # Second verse without tie_across — tie is released at section boundary
+  - name: verse_2
+    patterns:
+      piano: verse_piano
+      strings: strings_verse
+    repeat: 2

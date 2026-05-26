@@ -1,0 +1,26 @@
+[project]
+name = "muq"
+version = "0.1.0"
+description = "Parser, validator, and MIDI exporter for the muq music format"
+requires-python = ">=3.12"
+dependencies = [
+    "pyyaml>=6.0",
+    "jsonschema>=4.20",
+    "mido>=1.3",
+]
+
+[project.scripts]
+muq = "muq.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/muq"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]

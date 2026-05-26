@@ -1,0 +1,23 @@
+# INVALID: Duration conflict — event has both dur and dur_beats.
+# The spec requires exactly one of dur or dur_beats, not both.
+#
+# Expected error: DURATION_CONFLICT
+
+song:
+  tempo: 120
+  time: 4/4
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  conflict:
+    bars:
+      - - {note: C4, dur: q, dur_beats: 1.0}
+
+arrangement:
+  - name: test
+    patterns:
+      piano: conflict

@@ -1,0 +1,80 @@
+# meter_changes.muq — Demonstrates time signature changes within a section
+# A progressive rock passage alternating between 4/4, 7/8, and 5/4.
+
+song:
+  title: "Shifting Meters"
+  tempo: 140
+  time: 4/4
+
+tracks:
+  drums:
+    instrument: standard_kit
+    channel: 10
+  bass:
+    instrument: electric_bass_finger
+    channel: 2
+
+patterns:
+  # Bars 1-2 in 4/4, bars 3-4 in 7/8, bar 5 in 5/4
+  prog_drums:
+    bars:
+      # Bar 1 — 4/4
+      - - {beat: 1, note: kick,  dur: q, vel: 110}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: kick,  dur: q, vel: 100}
+        - {beat: 4, note: snare, dur: q, vel: 100}
+      # Bar 2 — 4/4
+      - - {beat: 1, note: kick,  dur: q, vel: 110}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: kick,  dur: e, vel: 100}
+        - {beat: 3.5, note: kick, dur: e, vel: 85}
+        - {beat: 4, note: snare, dur: q, vel: 105}
+      # Bar 3 — 7/8 (3.5 beats)
+      - - {beat: 1, note: kick,  dur: q, vel: 110}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: kick,  dur: e, vel: 95}
+        - {beat: 3.5, note: hh,  dur: s, vel: 70}
+      # Bar 4 — 7/8
+      - - {beat: 1, note: kick,  dur: q, vel: 110}
+        - {beat: 2, note: hh,    dur: e, vel: 70}
+        - {beat: 2.5, note: snare, dur: e, vel: 100}
+        - {beat: 3, note: kick,  dur: e, vel: 95}
+        - {beat: 3.5, note: hh,  dur: s, vel: 70}
+      # Bar 5 — 5/4 (5 beats)
+      - - {beat: 1, note: kick,  dur: q, vel: 110}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: kick,  dur: q, vel: 100}
+        - {beat: 4, note: snare, dur: q, vel: 95}
+        - {beat: 5, note: crash, dur: q, vel: 105}
+
+  prog_bass:
+    bars:
+      # Bar 1 — 4/4
+      - - {note: E2, dur: q, vel: 95}
+        - {note: G2, dur: q, vel: 85}
+        - {note: A2, dur: h, vel: 90}
+      # Bar 2 — 4/4
+      - - {note: E2, dur: h, vel: 95}
+        - {note: B2, dur: h, vel: 85}
+      # Bar 3 — 7/8 (3.5 beats)
+      - - {note: C2, dur: q, vel: 95}
+        - {note: D2, dur: q, vel: 85}
+        - {note: E2, dur_beats: 1.5, vel: 90}
+      # Bar 4 — 7/8
+      - - {note: A1, dur: q, vel: 95}
+        - {note: B1, dur: q, vel: 85}
+        - {note: C2, dur_beats: 1.5, vel: 90}
+      # Bar 5 — 5/4
+      - - {note: E2, dur: q, vel: 95}
+        - {note: G2, dur: q, vel: 85}
+        - {note: A2, dur: q, vel: 90}
+        - {note: B2, dur: h, vel: 90}
+
+arrangement:
+  - name: "Prog Section"
+    meter_events:
+      - {bar: 3, time: "7/8"}
+      - {bar: 5, time: "5/4"}
+    patterns:
+      drums: prog_drums
+      bass: prog_bass

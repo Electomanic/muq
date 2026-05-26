@@ -1,0 +1,59 @@
+# Percussion on non-10 channel — demonstrates the percussion flag
+# for modern DAW workflows (Ableton Drum Racks, etc.)
+
+song:
+  title: "Percussion Flag Demo"
+  tempo: 140
+  time: 4/4
+
+tracks:
+  # Standard GM drums on channel 10
+  main_kit:
+    instrument: standard
+    channel: 10
+
+  # Secondary percussion on channel 1 with explicit percussion flag
+  perc_fx:
+    instrument: standard
+    channel: 1
+    percussion: true
+    drum_map:
+      shaker: 70
+      clave: 75
+      cowbell: 56
+
+patterns:
+  basic_beat:
+    bars:
+      - - {beat: 1, note: kick, dur: q, vel: 110}
+        - {beat: 1, note: hh, dur: e, vel: 70}
+        - {beat: 1.5, note: hh, dur: e, vel: 55}
+        - {beat: 2, note: snare, dur: q, vel: 100}
+        - {beat: 2, note: hh, dur: e, vel: 70}
+        - {beat: 2.5, note: hh, dur: e, vel: 55}
+        - {beat: 3, note: kick, dur: q, vel: 105}
+        - {beat: 3, note: hh, dur: e, vel: 70}
+        - {beat: 3.5, note: hh, dur: e, vel: 55}
+        - {beat: 4, note: snare, dur: q, vel: 105}
+        - {beat: 4, note: hh, dur: e, vel: 70}
+        - {beat: 4.5, note: hh, dur: e, vel: 55}
+
+  perc_layer:
+    bars:
+      - - {beat: 1, note: shaker, dur: e, vel: 50}
+        - {beat: 1.5, note: shaker, dur: e, vel: 35}
+        - {beat: 2, note: shaker, dur: e, vel: 50}
+        - {beat: 2, note: clave, dur: s, vel: 85}
+        - {beat: 2.5, note: shaker, dur: e, vel: 35}
+        - {beat: 3, note: shaker, dur: e, vel: 50}
+        - {beat: 3.5, note: shaker, dur: e, vel: 35}
+        - {beat: 4, note: shaker, dur: e, vel: 50}
+        - {beat: 4, note: cowbell, dur: s, vel: 75}
+        - {beat: 4.5, note: shaker, dur: e, vel: 35}
+
+arrangement:
+  - name: "Layered Percussion"
+    repeat: 4
+    patterns:
+      main_kit: basic_beat
+      perc_fx: perc_layer

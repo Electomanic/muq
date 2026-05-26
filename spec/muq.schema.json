@@ -1,0 +1,502 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://muq.dev/schema/1.0.0/muq.schema.json",
+  "title": "muq Music Format",
+  "description": "Schema for .muq music files. See muq-spec.md for the full specification.",
+  "type": "object",
+  "required": ["song", "tracks", "patterns", "arrangement"],
+  "additionalProperties": false,
+  "properties": {
+    "song": { "$ref": "#/$defs/song" },
+    "tracks": { "$ref": "#/$defs/tracks" },
+    "patterns": { "$ref": "#/$defs/patterns" },
+    "arrangement": { "$ref": "#/$defs/arrangement" },
+    "drum_map": { "$ref": "#/$defs/drum_map" }
+  },
+
+  "$defs": {
+
+    "song": {
+      "type": "object",
+      "description": "Song metadata.",
+      "required": ["tempo", "time"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Song title."
+        },
+        "artist": {
+          "type": "string",
+          "description": "Artist or composer name."
+        },
+        "tempo": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 999,
+          "description": "Tempo in BPM."
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*/[124]$|^[1-9][0-9]*/8$|^[1-9][0-9]*/16$|^[1-9][0-9]*/32$",
+          "description": "Time signature as N/D where D is a power of 2 (1,2,4,8,16,32)."
+        },
+        "key": {
+          "type": "string",
+          "description": "Key signature, e.g. 'C major', 'F# minor'. Informational unless scale_mode is set."
+        },
+        "scale_mode": {
+          "type": "string",
+          "enum": ["off", "warn", "strict"],
+          "default": "off",
+          "description": "Scale validation mode: 'off' (default), 'warn', or 'strict'."
+        },
+        "spec_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+",
+          "description": "muq spec version this file conforms to.",
+          "default": "1.0.0"
+        }
+      }
+    },
+
+    "tracks": {
+      "type": "object",
+      "description": "Named instrument/channel definitions.",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+      },
+      "additionalProperties": { "$ref": "#/$defs/track" }
+    },
+
+    "track": {
+      "type": "object",
+      "description": "A single instrument track.",
+      "required": ["instrument", "channel"],
+      "additionalProperties": false,
+      "properties": {
+        "instrument": {
+          "type": "string",
+          "description": "GM instrument name (see spec Appendix A) or 'standard' for drums."
+        },
+        "channel": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "MIDI channel (1-16). Channel 10 is reserved for drums."
+        },
+        "volume": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127,
+          "default": 100,
+          "description": "Track volume."
+        },
+        "pan": {
+          "description": "Pan position: 'left' (0), 'center' (64), 'right' (127), or integer 0-127.",
+          "oneOf": [
+            { "type": "string", "enum": ["left", "center", "right"] },
+            { "type": "integer", "minimum": 0, "maximum": 127 }
+          ],
+          "default": "center"
+        },
+        "drum_map": {
+          "type": "object",
+          "description": "Per-track drum name to MIDI note overrides. Only meaningful for percussion tracks.",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 127
+          }
+        },
+        "percussion": {
+          "type": "boolean",
+          "description": "If true, this track is a percussion track. Defaults to true when channel is 10 or instrument is 'standard'."
+        }
+      }
+    },
+
+    "patterns": {
+      "type": "object",
+      "description": "Named note sequence definitions.",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+      },
+      "additionalProperties": { "$ref": "#/$defs/pattern" }
+    },
+
+    "pattern": {
+      "type": "object",
+      "description": "A named sequence of bars. Track binding is specified in the arrangement.",
+      "required": ["bars"],
+      "additionalProperties": false,
+      "properties": {
+        "bars": {
+          "type": "array",
+          "description": "Ordered list of bars. Each bar is a list of events.",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/bar" }
+        },
+        "swing": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 75,
+          "default": 50,
+          "description": "Swing percentage (50-75). 50 = straight, ~67 = triplet swing."
+        }
+      }
+    },
+
+    "bar": {
+      "type": "array",
+      "description": "A single bar (measure) containing events.",
+      "items": { "$ref": "#/$defs/event" }
+    },
+
+    "event": {
+      "description": "A note event, rest event, automation event, or text event.",
+      "oneOf": [
+        { "$ref": "#/$defs/note_event" },
+        { "$ref": "#/$defs/rest_event" },
+        { "$ref": "#/$defs/cc_event" },
+        { "$ref": "#/$defs/pitch_bend_event" },
+        { "$ref": "#/$defs/aftertouch_event" },
+        { "$ref": "#/$defs/text_event" }
+      ]
+    },
+
+    "note_event": {
+      "type": "object",
+      "description": "A note or chord event.",
+      "oneOf": [
+        { "required": ["note", "dur"], "not": { "required": ["dur_beats"] } },
+        { "required": ["note", "dur_beats"], "not": { "required": ["dur"] } }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "$ref": "#/$defs/pitch_value" },
+        "dur": { "$ref": "#/$defs/duration" },
+        "dur_beats": { "$ref": "#/$defs/numeric_duration" },
+        "vel": { "$ref": "#/$defs/velocity" },
+        "beat": { "$ref": "#/$defs/beat_position" },
+        "tie": {
+          "type": "boolean",
+          "description": "If true, tie this note to the next matching pitch."
+        },
+        "voice": {
+          "type": "integer",
+          "description": "Voice number for polyphonic tie disambiguation."
+        },
+        "offset_beats": {
+          "type": "number",
+          "description": "Microtiming offset in quarter-note beats. Displaces the event from its quantized position."
+        },
+        "articulation": {
+          "type": "string",
+          "enum": ["staccato", "staccatissimo", "legato", "tenuto", "accent", "marcato", "portato"],
+          "description": "Articulation marking that modifies gate time and/or velocity."
+        }
+      }
+    },
+
+    "rest_event": {
+      "type": "object",
+      "description": "A rest (silence) event.",
+      "oneOf": [
+        { "required": ["rest"], "not": { "required": ["rest_beats"] } },
+        { "required": ["rest_beats"], "not": { "required": ["rest"] } }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "rest": { "$ref": "#/$defs/duration" },
+        "rest_beats": { "$ref": "#/$defs/numeric_duration" },
+        "beat": { "$ref": "#/$defs/beat_position" }
+      }
+    },
+
+    "cc_event": {
+      "type": "object",
+      "description": "A MIDI continuous controller event.",
+      "required": ["cc", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "cc": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127,
+          "description": "MIDI CC number (0-127)."
+        },
+        "value": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127,
+          "description": "CC value (0-127)."
+        },
+        "beat": { "$ref": "#/$defs/beat_position" },
+        "interp": {
+          "type": "string",
+          "enum": ["step", "linear"],
+          "default": "step",
+          "description": "Interpolation from previous value: 'step' (instant) or 'linear' (ramp)."
+        },
+        "offset_beats": {
+          "type": "number",
+          "description": "Microtiming offset in quarter-note beats."
+        }
+      }
+    },
+
+    "pitch_bend_event": {
+      "type": "object",
+      "description": "A MIDI pitch bend event.",
+      "required": ["pitch_bend"],
+      "additionalProperties": false,
+      "properties": {
+        "pitch_bend": {
+          "type": "integer",
+          "minimum": -8192,
+          "maximum": 8191,
+          "description": "Pitch bend value (-8192 to 8191). 0 = center."
+        },
+        "beat": { "$ref": "#/$defs/beat_position" },
+        "interp": {
+          "type": "string",
+          "enum": ["step", "linear"],
+          "default": "step",
+          "description": "Interpolation from previous value: 'step' (instant) or 'linear' (ramp)."
+        },
+        "offset_beats": {
+          "type": "number",
+          "description": "Microtiming offset in quarter-note beats."
+        }
+      }
+    },
+
+    "aftertouch_event": {
+      "type": "object",
+      "description": "A MIDI channel aftertouch event.",
+      "required": ["aftertouch"],
+      "additionalProperties": false,
+      "properties": {
+        "aftertouch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127,
+          "description": "Channel aftertouch value (0-127)."
+        },
+        "beat": { "$ref": "#/$defs/beat_position" },
+        "interp": {
+          "type": "string",
+          "enum": ["step", "linear"],
+          "default": "step",
+          "description": "Interpolation from previous value: 'step' (instant) or 'linear' (ramp)."
+        },
+        "offset_beats": {
+          "type": "number",
+          "description": "Microtiming offset in quarter-note beats."
+        }
+      }
+    },
+
+    "pitch_value": {
+      "description": "A single pitch string or an array of pitch strings (chord).",
+      "oneOf": [
+        { "$ref": "#/$defs/pitch" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pitch" },
+          "minItems": 1,
+          "description": "Chord: array of pitches sounding simultaneously."
+        }
+      ]
+    },
+
+    "pitch": {
+      "type": "string",
+      "description": "A pitch in note-octave format (e.g. 'C4', 'F#5', 'Bb3') or a drum name (e.g. 'kick', 'snare').",
+      "pattern": "^[A-Ga-g](#{1,2}|b{1,2})?-?[0-9]$|^[a-zA-Z_][a-zA-Z0-9_]*$"
+    },
+
+    "duration": {
+      "type": "string",
+      "description": "Duration token: base (w,h,q,e,s,x) with optional modifier (d,dd,t).",
+      "enum": [
+        "w", "wd", "wdd", "wt",
+        "h", "hd", "hdd", "ht",
+        "q", "qd", "qdd", "qt",
+        "e", "ed", "edd", "et",
+        "s", "sd", "sdd", "st",
+        "x", "xd", "xdd", "xt"
+      ]
+    },
+
+    "numeric_duration": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Numeric duration in quarter-note beats. For values tokens cannot express (64th notes, tuplets, etc.)."
+    },
+
+    "velocity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 127,
+      "default": 80,
+      "description": "MIDI velocity (1-127). Default is 80."
+    },
+
+    "beat_position": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Beat position within a bar (1-indexed). E.g. 1, 1.5, 2.75."
+    },
+
+    "arrangement": {
+      "type": "array",
+      "description": "Ordered list of arrangement sections.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/section" }
+    },
+
+    "section": {
+      "type": "object",
+      "description": "An arrangement section that assigns patterns to tracks.",
+      "required": ["name", "patterns"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Section name (for readability)."
+        },
+        "patterns": {
+          "type": "object",
+          "description": "Mapping of track name to pattern name. Each key must be a defined track; each value must be a defined pattern.",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          },
+          "additionalProperties": { "type": "string" }
+        },
+        "repeat": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9999,
+          "default": 1,
+          "description": "Number of times to repeat this section."
+        },
+        "tempo": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 999,
+          "description": "Tempo override for this section (BPM)."
+        },
+        "tie_across": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, tied notes at end of this section carry into the next section."
+        },
+        "tempo_events": {
+          "type": "array",
+          "description": "Tempo changes within this section.",
+          "items": { "$ref": "#/$defs/tempo_event" }
+        },
+        "meter_events": {
+          "type": "array",
+          "description": "Time signature changes within this section.",
+          "items": { "$ref": "#/$defs/meter_event" }
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*/[124]$|^[1-9][0-9]*/8$|^[1-9][0-9]*/16$|^[1-9][0-9]*/32$",
+          "description": "Time signature override for this section."
+        },
+        "pickup_beats": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Number of beats in the pickup (anacrusis) bar. Must be less than beats_per_bar."
+        }
+      }
+    },
+
+    "tempo_event": {
+      "type": "object",
+      "description": "A tempo change point within an arrangement section.",
+      "required": ["bar", "beat", "tempo"],
+      "additionalProperties": false,
+      "properties": {
+        "bar": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Bar number within the section (1-indexed)."
+        },
+        "beat": { "$ref": "#/$defs/beat_position" },
+        "tempo": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 999,
+          "description": "Target tempo in BPM."
+        },
+        "interp": {
+          "type": "string",
+          "enum": ["step", "linear"],
+          "default": "step",
+          "description": "Interpolation from previous tempo: 'step' (instant) or 'linear' (gradual ramp)."
+        }
+      }
+    },
+
+    "meter_event": {
+      "type": "object",
+      "description": "A time signature change point within an arrangement section.",
+      "required": ["bar", "time"],
+      "additionalProperties": false,
+      "properties": {
+        "bar": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Bar number within the section (1-indexed) where the new meter takes effect."
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*/[124]$|^[1-9][0-9]*/8$|^[1-9][0-9]*/16$|^[1-9][0-9]*/32$",
+          "description": "New time signature."
+        }
+      }
+    },
+
+    "text_event": {
+      "type": "object",
+      "description": "A text, lyric, marker, rehearsal mark, or chord symbol event.",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The text content."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["lyric", "marker", "rehearsal", "chord", "text"],
+          "default": "text",
+          "description": "Text event type: 'lyric', 'marker', 'rehearsal', 'chord', or 'text' (default)."
+        },
+        "beat": { "$ref": "#/$defs/beat_position" },
+        "offset_beats": {
+          "type": "number",
+          "description": "Microtiming offset in quarter-note beats."
+        }
+      }
+    },
+
+    "drum_map": {
+      "type": "object",
+      "description": "Custom drum name to MIDI note number mappings.",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 127
+      }
+    }
+  }
+}

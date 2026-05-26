@@ -1,0 +1,91 @@
+# Polyrhythm showcase — beat-addressed mode for complex timing.
+# Demonstrates: overlapping voices, triplets against straight time,
+# cross-rhythm patterns, syncopation.
+
+song:
+  title: Polyrhythm Study
+  tempo: 100
+  time: 4/4
+  key: C major
+
+tracks:
+  right_hand:
+    instrument: acoustic_grand_piano
+    channel: 1
+    volume: 90
+    pan: 80
+
+  left_hand:
+    instrument: acoustic_grand_piano
+    channel: 1
+    volume: 85
+    pan: 48
+
+  drums:
+    instrument: standard
+    channel: 10
+
+patterns:
+  # 3 against 4: right hand plays triplet quarters, left hand plays regular quarters
+  three_over_four_rh:
+    bars:
+      - # Triplet quarter-note dyads across the bar: 6 positions at beat 1, 1.667, 2.333, 3, 3.667, 4.333
+        - {beat: 1, note: E5, dur: qt}
+        - {beat: 1, note: G5, dur: qt}
+        - {beat: 1.6667, note: F5, dur: qt}
+        - {beat: 1.6667, note: A5, dur: qt}
+        - {beat: 2.3333, note: E5, dur: qt}
+        - {beat: 2.3333, note: G5, dur: qt}
+        - {beat: 3, note: F5, dur: qt}
+        - {beat: 3, note: A5, dur: qt}
+        - {beat: 3.6667, note: E5, dur: qt}
+        - {beat: 3.6667, note: G5, dur: qt}
+        - {beat: 4.3333, note: F5, dur: qt}
+        - {beat: 4.3333, note: A5, dur: qt}
+
+  three_over_four_lh:
+    bars:
+      - - {beat: 1, note: [C3, G3], dur: q}
+        - {beat: 2, note: [C3, G3], dur: q}
+        - {beat: 3, note: [C3, G3], dur: q}
+        - {beat: 4, note: [C3, G3], dur: q}
+
+  # Syncopated pattern — accents on off-beats
+  syncopated:
+    bars:
+      - - {beat: 1.5, note: C5, dur: e, vel: 110}
+        - {beat: 2.5, note: E5, dur: e, vel: 110}
+        - {beat: 3, note: G5, dur: q, vel: 90}
+        - {beat: 4.5, note: C5, dur: e, vel: 110}
+      - - {beat: 1, note: D5, dur: qd, vel: 100}
+        - {beat: 2.5, note: F5, dur: e, vel: 110}
+        - {beat: 3.5, note: A5, dur: e, vel: 110}
+        - {beat: 4, note: G5, dur: q, vel: 90}
+
+  # Drums: displaced backbeat
+  drums_displaced:
+    bars:
+      - - {beat: 1, note: kick, dur: q}
+        - {beat: 1, note: hh, dur: e}
+        - {beat: 1.5, note: hh, dur: e}
+        - {beat: 2, note: hh, dur: e}
+        - {beat: 2.5, note: snare, dur: q, vel: 100}
+        - {beat: 3, note: hh, dur: e}
+        - {beat: 3.5, note: kick, dur: e}
+        - {beat: 4, note: hh, dur: e}
+        - {beat: 4.5, note: snare, dur: e, vel: 90}
+
+arrangement:
+  - name: polyrhythm
+    patterns:
+      right_hand: three_over_four_rh
+      left_hand: three_over_four_lh
+      drums: drums_displaced
+    repeat: 4
+
+  - name: syncopation
+    patterns:
+      right_hand: syncopated
+      left_hand: three_over_four_lh
+      drums: drums_displaced
+    repeat: 4

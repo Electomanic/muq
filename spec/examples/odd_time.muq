@@ -1,0 +1,66 @@
+# Odd time signatures — demonstrates 7/8 and 5/4.
+# 7/8: 3.5 quarter-note beats per bar
+# 5/4: 5 quarter-note beats per bar
+
+song:
+  title: Odd Time Grooves
+  tempo: 140
+  time: 7/8
+  key: D minor
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+  bass:
+    instrument: acoustic_bass
+    channel: 2
+
+  drums:
+    instrument: standard
+    channel: 10
+
+patterns:
+  # 7/8 piano pattern — 3.5 beats per bar
+  piano_7_8:
+    bars:
+      - # 3.5 beats: q + q + q + e = 1 + 1 + 1 + 0.5
+        - {note: D4, dur: q}
+        - {note: F4, dur: q}
+        - {note: A4, dur: q}
+        - {note: D5, dur: e}
+      - - {note: C4, dur: q}
+        - {note: E4, dur: q}
+        - {note: G4, dur: qd}
+
+  # 7/8 bass — 3.5 beats
+  bass_7_8:
+    bars:
+      - - {note: D2, dur: qd}
+        - {note: A2, dur: q}
+        - {note: D2, dur: q}
+      - - {note: C2, dur: qd}
+        - {note: G2, dur: q}
+        - {note: C2, dur: q}
+
+  # 7/8 drums — beat-addressed for precision
+  drums_7_8:
+    bars:
+      - - {beat: 1, note: kick, dur: q}
+        - {beat: 1, note: hh, dur: e}
+        - {beat: 1.5, note: hh, dur: e}
+        - {beat: 2, note: snare, dur: q}
+        - {beat: 2, note: hh, dur: e}
+        - {beat: 2.5, note: hh, dur: e}
+        - {beat: 3, note: kick, dur: e}
+        - {beat: 3, note: hh, dur: e}
+        - {beat: 3.5, note: hh, dur: e}
+
+arrangement:
+  - name: section_a
+    patterns:
+      piano: piano_7_8
+      bass: bass_7_8
+      drums: drums_7_8
+    repeat: 4
