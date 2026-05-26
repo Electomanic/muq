@@ -90,7 +90,7 @@ def _parse_pattern(name: str, d: dict) -> Pattern:
     for bar_data in d["bars"]:
         bar = [_parse_event(ev) for ev in (bar_data or [])]
         bars.append(bar)
-    return Pattern(bars=bars, swing=d.get("swing", 50))
+    return Pattern(bars=bars, notation=d.get("notation", "pitched"), swing=d.get("swing", 50))
 
 
 def _parse_track(name: str, d: dict) -> Track:

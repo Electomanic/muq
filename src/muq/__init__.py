@@ -2,7 +2,7 @@
 
 from muq.parser import parse
 from muq.validate import validate
-from muq.resolve import resolve
+from muq.resolve import resolve, resolve_pattern
 from muq.midi import to_midi
 
-__all__ = ["parse", "validate", "resolve", "to_midi"]
+__all__ = ["parse", "validate", "resolve", "resolve_pattern", "to_midi"]

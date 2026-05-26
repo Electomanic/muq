@@ -27,6 +27,7 @@ tracks:
 patterns:
   # ---- DRUM PATTERNS ----
   verse_beat:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick,  dur: q, vel: 100}
         - {beat: 1, note: hh,    dur: e, vel: 65, offset_beats: 0.01}
@@ -43,6 +44,7 @@ patterns:
         - {beat: 4.5, note: hh,  dur: e, vel: 50, offset_beats: 0.015}
 
   chorus_beat:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick,     dur: q, vel: 115}
         - {beat: 1, note: crash,    dur: q, vel: 90}
@@ -55,6 +57,7 @@ patterns:
         - {beat: 4, note: hh_open,  dur: e, vel: 70}
 
   fill_4:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick,    dur: e, vel: 110}
         - {beat: 1, note: crash,   dur: q, vel: 95}

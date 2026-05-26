@@ -10,6 +10,7 @@ from muq.gm import (
     DURATION_TOKENS,
     ARTICULATIONS,
     beats_per_bar,
+    is_pitched_notation,
     parse_time_signature,
     pitch_to_midi,
     resolve_drum_name,
@@ -103,6 +104,34 @@ def _validate_tracks(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 # Patterns
 # ---------------------------------------------------------------------------
 
+def _check_pitch_notation_consistency(
+    pattern, path: str, diags: list[Diagnostic]
+) -> None:
+    """Check that all note events match the pattern's declared notation style."""
+    if pattern.notation not in ("pitched", "percussion"):
+        diags.append(Diagnostic(
+            "INVALID_NOTATION",
+            f"Unknown notation: {pattern.notation}",
+            path=path,
+        ))
+        return
+
+    expect_pitched = pattern.notation == "pitched"
+    for bar in pattern.bars:
+        for event in bar:
+            if not isinstance(event, NoteEvent):
+                continue
+            notes = event.note if isinstance(event.note, list) else [event.note]
+            for n in notes:
+                if is_pitched_notation(n) != expect_pitched:
+                    kind = "pitched" if expect_pitched else "percussion"
+                    diags.append(Diagnostic(
+                        "MIXED_PITCH_NOTATION",
+                        f"Note '{n}' does not match pattern notation: {kind}",
+                        path=path,
+                    ))
+                    return
+
 def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
     # Determine which patterns are used by which tracks
     pattern_to_tracks: dict[str, set[str]] = {}
@@ -115,6 +144,9 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
         if not pattern.bars:
             diags.append(Diagnostic("EMPTY_PATTERN", "Pattern has zero bars", path=path))
             continue
+
+        # Check pitch notation consistency (§6.2)
+        _check_pitch_notation_consistency(pattern, path, diags)
 
         track_names = pattern_to_tracks.get(name, set())
         tracks = [doc.tracks[tn] for tn in track_names if tn in doc.tracks]
@@ -231,6 +263,20 @@ def _validate_arrangement(doc: MuqDocument, diags: list[Diagnostic]) -> None:
             if pat_name not in doc.patterns:
                 diags.append(Diagnostic("UNKNOWN_PATTERN",
                                         f"Unknown pattern: {pat_name}", path=f"{path}.patterns"))
+            # Notation–track cross-check
+            if track_name in doc.tracks and pat_name in doc.patterns:
+                track = doc.tracks[track_name]
+                pattern = doc.patterns[pat_name]
+                if pattern.notation == "percussion" and not track.is_percussion:
+                    diags.append(Diagnostic(
+                        "NOTATION_TRACK_MISMATCH",
+                        f"Percussion pattern '{pat_name}' bound to non-percussion track '{track_name}'",
+                        severity="warning", path=f"{path}.patterns"))
+                elif pattern.notation == "pitched" and track.is_percussion:
+                    diags.append(Diagnostic(
+                        "NOTATION_TRACK_MISMATCH",
+                        f"Pitched pattern '{pat_name}' bound to percussion track '{track_name}'",
+                        severity="warning", path=f"{path}.patterns"))
 
         # Determine bar count from the longest pattern in the section
         max_bars = 0

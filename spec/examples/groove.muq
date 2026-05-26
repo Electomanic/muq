@@ -16,6 +16,7 @@ tracks:
 
 patterns:
   groove_beat:
+    notation: percussion
     bars:
       # Bar 1 — pushed hi-hats, dragged snare
       - - {beat: 1,   note: kick,  dur: q, vel: 110}

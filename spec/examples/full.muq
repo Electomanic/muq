@@ -97,6 +97,7 @@ patterns:
 
   # Drums: beat-addressed (overlapping hits)
   drums_verse:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q}
         - {beat: 1, note: hh, dur: e}
@@ -113,6 +114,7 @@ patterns:
 
   # Drums: fill with toms and crash
   drums_fill:
+    notation: percussion
     bars:
       - - {beat: 1, note: snare, dur: e}
         - {beat: 1.5, note: snare, dur: e}
@@ -125,6 +127,7 @@ patterns:
 
   # Drums: crash hit for transitions
   drums_crash:
+    notation: percussion
     bars:
       - - {beat: 1, note: crash, dur: q, vel: 120}
         - {beat: 1, note: kick, dur: q, vel: 110}

@@ -139,6 +139,12 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/bar" }
         },
+        "notation": {
+          "type": "string",
+          "enum": ["pitched", "percussion"],
+          "default": "pitched",
+          "description": "Pitch notation style: 'pitched' for note-octave (C4), 'percussion' for drum names (kick)."
+        },
         "swing": {
           "type": "integer",
           "minimum": 50,

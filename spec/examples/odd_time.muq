@@ -46,6 +46,7 @@ patterns:
 
   # 7/8 drums — beat-addressed for precision
   drums_7_8:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q}
         - {beat: 1, note: hh, dur: e}

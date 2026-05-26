@@ -64,6 +64,7 @@ patterns:
 
   # Drums: displaced backbeat
   drums_displaced:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q}
         - {beat: 1, note: hh, dur: e}

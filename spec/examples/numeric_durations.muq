@@ -63,6 +63,7 @@ patterns:
 
   # Hi-hat rolls using 32nd notes
   drums_roll:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q, vel: 110}
         - {beat: 1, note: hh, dur: x, vel: 90}

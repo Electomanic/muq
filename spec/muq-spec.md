@@ -146,6 +146,7 @@ The `patterns` mapping defines named, reusable sequences of musical events. Each
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `bars` | sequence | **yes** | — | Ordered list of bars. Each bar is a sequence of events. |
+| `notation` | string | no | `"pitched"` | Pitch notation style: `"pitched"` for note-octave notation (e.g. `C4`) or `"percussion"` for drum name notation (e.g. `kick`). |
 | `swing` | integer | no | 50 | Swing percentage (50–75). See §6.3. |
 
 ### 6.1 Bar Structure
@@ -158,6 +159,8 @@ An empty bar (empty list `[]`) represents a bar of silence.
 
 - Pattern names MUST be unique.
 - Patterns are pure musical data. Track binding is specified in the `arrangement` (see §7).
+- **Pitch notation consistency**: All note events within a pattern MUST use the notation style declared by the pattern's `notation` field. If `notation` is `"pitched"` (the default), all note events must use note-octave notation (e.g. `C4`, `F#3`). If `notation` is `"percussion"`, all note events must use drum name notation (e.g. `kick`, `snare`). Mixing notation styles is invalid (`MIXED_PITCH_NOTATION`). Events without pitches (rests, CC, pitch bend, aftertouch, text) do not affect this constraint. A pattern with no note events (e.g. pure automation) is valid with either notation value.
+- **Notation–track consistency**: When a section binds a pattern to a track, the pattern's `notation` SHOULD match the track's percussion status. Binding a `notation: percussion` pattern to a non-percussion track (or vice versa) produces a warning (`NOTATION_TRACK_MISMATCH`).
 
 ### 6.3 Swing
 
@@ -884,7 +887,7 @@ Rules:
 7. Key order for pitch bend events: `beat`, `pitch_bend`, `interp`, `offset_beats`.
 8. Key order for aftertouch events: `beat`, `aftertouch`, `interp`, `offset_beats`.
 9. Key order for text events: `beat`, `text`, `type`, `offset_beats`.
-10. Default values are omitted (e.g. `vel: 80` is not written; `interp: step` is not written; `offset_beats: 0` is not written; `type: text` is not written on text events).
+10. Default values are omitted (e.g. `vel: 80` is not written; `interp: step` is not written; `offset_beats: 0` is not written; `type: text` is not written on text events; `notation: pitched` is not written on patterns).
 11. Top-level keys appear in order: `song`, `tracks`, `patterns`, `arrangement`, `drum_map`.
 12. Arrangement `patterns` uses YAML block mapping style (one track→pattern per line).
 13. Bars are represented as YAML block sequences of flow mappings.
@@ -929,6 +932,8 @@ Implementations MUST detect and report the following error classes:
 |-------|-------------|
 | `MISSING_BARS` | Pattern is missing `bars`. |
 | `EMPTY_PATTERN` | Pattern has zero bars. |
+| `MIXED_PITCH_NOTATION` | Pattern contains note events that do not match its declared `notation` style. |
+| `INVALID_NOTATION` | `notation` is not `"pitched"` or `"percussion"`. |
 
 ### 18.5 Event Errors
 
@@ -979,6 +984,7 @@ Implementations MUST detect and report the following error classes:
 | `INVALID_METER_EVENT` | A meter event is missing required fields or has an invalid time signature. |
 | `TIE_ACROSS_NO_MATCH` | `tie_across` is true but the next section has no matching track/pitch (warning). |
 | `DRUM_MAP_NON_PERCUSSION` | Per-track `drum_map` is set on a non-percussion track (warning). |
+| `NOTATION_TRACK_MISMATCH` | A section binds a `notation: percussion` pattern to a non-percussion track, or a `notation: pitched` pattern to a percussion track (warning). |
 
 ## 19. Future Considerations
 
@@ -989,7 +995,6 @@ The following features are being considered for future spec versions and are NOT
 - **Exponential / curve interpolation**: Additional `interp` modes beyond `step` and `linear` (e.g. `ease_in`, `ease_out`, `bezier`) for smoother automation curves.
 - **Key-poly aftertouch**: Per-note aftertouch events (currently only channel aftertouch is supported).
 - **MPE (MIDI Polyphonic Expression)**: Per-note pitch bend and pressure for microtonal and expressive performance.
-- **Clip export mode**: Exporting individual patterns as separate MIDI files for DAW clip-based workflows.
 - **Short-key aliases**: Optional compact key aliases (e.g. `n` for `note`, `d` for `dur`) for terseness. May be reintroduced as an optional compact mode in a future version.
 - **Song-level groove templates**: A song-level `groove` object specifying humanization ranges for timing and velocity across all patterns.
 - **Grace notes and ornaments**: Acciaccatura, appoggiatura, trills, mordents, turns, and other ornamental figures.

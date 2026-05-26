@@ -19,6 +19,7 @@ drum_map:
 patterns:
   # Basic rock beat
   rock_basic:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q, vel: 100}
         - {beat: 1, note: hh, dur: e, vel: 80}
@@ -35,6 +36,7 @@ patterns:
 
   # Funk groove with ghost notes
   funk_groove:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: e, vel: 110}
         - {beat: 1, note: hh, dur: e, vel: 90}
@@ -56,6 +58,7 @@ patterns:
 
   # Half-time shuffle
   half_time:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q, vel: 100}
         - {beat: 1, note: hh, dur: et, vel: 85}
@@ -75,6 +78,7 @@ patterns:
 
   # Four-bar fill
   fill_4bar:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q, vel: 100}
         - {beat: 2, note: snare, dur: q, vel: 90}

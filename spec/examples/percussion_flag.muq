@@ -24,6 +24,7 @@ tracks:
 
 patterns:
   basic_beat:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick, dur: q, vel: 110}
         - {beat: 1, note: hh, dur: e, vel: 70}
@@ -39,6 +40,7 @@ patterns:
         - {beat: 4.5, note: hh, dur: e, vel: 55}
 
   perc_layer:
+    notation: percussion
     bars:
       - - {beat: 1, note: shaker, dur: e, vel: 50}
         - {beat: 1.5, note: shaker, dur: e, vel: 35}

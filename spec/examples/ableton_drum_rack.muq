@@ -33,6 +33,7 @@ tracks:
 
 patterns:
   four_on_floor:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick,  dur: q, vel: 110}
         - {beat: 1, note: hh,    dur: e, vel: 75}
@@ -50,6 +51,7 @@ patterns:
         - {beat: 4.5, note: shaker, dur: e, vel: 50}
 
   fill:
+    notation: percussion
     bars:
       - - {beat: 1, note: kick,   dur: q, vel: 110}
         - {beat: 1, note: crash,  dur: q, vel: 100}
