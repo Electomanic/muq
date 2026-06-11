@@ -1,7 +1,7 @@
 # muq Format Specification
 
 **Version:** 1.0.0-draft
-**Date:** 2026-05-26
+**Date:** 2026-06-11
 **License:** [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 
 ## 1. Overview
@@ -56,9 +56,9 @@ The `song` mapping contains metadata about the composition.
 |-----|------|----------|---------|-------------|
 | `title` | string | no | — | Song title |
 | `artist` | string | no | — | Artist/composer name |
-| `tempo` | number | **yes** | — | Tempo in QPM (quarter notes per minute). This is the MIDI-standard tempo unit: the number of quarter-note beats per minute. Range: 1–999. |
+| `tempo` | number | **yes** | — | Tempo in QPM (quarter notes per minute). This is the MIDI-standard tempo unit: the number of quarter-note beats per minute. Range: 1–999. Fractional tempos (e.g. `93.5`) are allowed — useful when matching existing recordings. |
 | `time` | string | **yes** | — | Time signature as `numerator/denominator`, e.g. `4/4`, `3/4`, `7/8`. |
-| `key` | string | no | — | Key signature. Format: `<tonic> <mode>` where tonic matches `[A-G](#|b|##|bb)?` and mode is one of: `major`, `minor` (alias for `natural_minor`), `natural_minor`, `harmonic_minor`, `melodic_minor`, `dorian`, `phrygian`, `lydian`, `mixolydian`, `aeolian`, `locrian`, `pentatonic`, `minor_pentatonic`, `blues`, `chromatic`. Examples: `C major`, `F# minor`, `Bb dorian`. Informational only by default; see `scale_mode`. |
+| `key` | string | no | — | Key signature. Format: `<tonic> <mode>` where tonic matches `[A-G](#|b|##|bb)?` and mode is one of: `major`, `minor` (alias for `natural_minor`), `natural_minor`, `harmonic_minor`, `melodic_minor`, `dorian`, `phrygian`, `lydian`, `mixolydian`, `aeolian`, `locrian`, `pentatonic`, `minor_pentatonic`, `blues`, `chromatic`. Examples: `C major`, `F# minor`, `Bb dorian`. Informational only by default; see `scale_mode`. Sections MAY override the key for modulations (§7). |
 | `scale_mode` | string | no | — | Scale validation mode: `"off"` (default), `"warn"`, or `"strict"`. See §4.2. |
 | `spec_version` | string | no | `"1.0.0"` | muq spec version this file conforms to. |
 
@@ -185,25 +185,32 @@ An empty bar (empty list `[]`) represents a bar of silence.
 
 ### 6.3 Swing
 
-A pattern MAY include a `swing` key to apply swing feel to all events on the eighth-note grid.
+A pattern MAY include a `swing` key to apply swing feel to all events on the swing subdivision grid.
 
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `swing` | integer | no | 50 | Swing percentage (50–75). 50 = straight, ~67 = triplet swing. |
+| `swing_unit` | integer | no | 8 | Swing subdivision: `8` (eighth-note swing, jazz/shuffle) or `16` (sixteenth-note swing, hip-hop/house/MPC-style). |
 
-The `swing` value indicates where the offbeat eighth note lands within each beat, expressed as a percentage from the beat start:
+The `swing` value indicates where the offbeat subdivision lands within each swing pair, expressed as a percentage of the pair's span:
 
-- **50** — the offbeat lands exactly halfway through the beat (straight eighths).
-- **67** — the offbeat lands 2/3 through the beat (triplet swing).
-- **75** — the offbeat lands 3/4 through the beat (hard shuffle).
+- **50** — the offbeat lands exactly halfway through the pair (straight).
+- **67** — the offbeat lands 2/3 through the pair (triplet swing).
+- **75** — the offbeat lands 3/4 through the pair (hard shuffle).
 
-Swing displaces events whose beat position falls on an off-beat eighth (i.e. positions `X.5` where X is an integer). Events on the beat (integer positions) are unaffected. The swung position is calculated as:
+A **swing pair** spans two subdivision units: one quarter-note beat for `swing_unit: 8` (two eighths), or one eighth-note (0.5 beats) for `swing_unit: 16` (two sixteenths). Swing displaces events whose beat position falls on the offbeat of a pair; events on pair starts are unaffected. The swung position is calculated as:
 
-$$\text{swung\_position} = \lfloor b \rfloor + \frac{\text{swing}}{100}$$
+$$\text{swung\_position} = \text{pair\_start} + \text{span} \times \frac{\text{swing}}{100}$$
 
-where $b$ is the original beat position. For a straight event at beat 1.5 with `swing: 67`, the swung position is $1 + 0.67 = 1.67$.
+where $\text{span}$ is 1.0 beat for `swing_unit: 8` and 0.5 beats for `swing_unit: 16`, and $\text{pair\_start} = \lfloor (b - 1) / \text{span} \rfloor \times \text{span} + 1$ for a 1-indexed beat position $b$.
+
+For `swing_unit: 8` this reduces to the familiar form $\lfloor b \rfloor + \text{swing}/100$: an event at beat 1.5 with `swing: 67` lands at $1.67$. For `swing_unit: 16`, off-sixteenth positions (`X.25` and `X.75`) are displaced — an event at beat 1.25 with `swing: 60` lands at $1 + 0.5 \times 0.60 = 1.30$ — while on-eighth positions (`X.0`, `X.5`) are pair starts and remain unaffected.
+
+Swing applies to **all beat-positioned events** in the pattern: notes, CC, pitch bend, aftertouch, and text events. A swung hi-hat and its accompanying CC automation stay locked together.
 
 Swing is a separate timing layer from `offset_beats` — it does NOT create `offset_beats` entries.
+
+Different tracks can have different swing feels by using different patterns (e.g. swung hats over a straight bassline); per-event swing overrides are reserved for a future version.
 
 ```yaml
 patterns:
@@ -227,6 +234,7 @@ The `arrangement` is an ordered sequence of section mappings. Each section assig
 | `repeat` | integer | no | 1 | Number of times to repeat this section. Range: 1–9999. |
 | `tempo` | number | no | (inherited) | Tempo override for this section. Applies at the start of the section. |
 | `time` | string | no | (inherited) | Time signature override for this section (e.g. `"7/8"`). Applies to all bars unless overridden by `meter_events`. |
+| `key` | string | no | (inherited) | Key signature override for this section (same format as `song.key`). Enables modulations — e.g. a final chorus that shifts up a whole step. Scale validation (§4.2) uses the active key per section. |
 | `tie_across` | boolean | no | false | If true, tied notes at the end of this section carry into the next section. See §13. |
 | `tempo_events` | sequence | no | — | Tempo changes within this section. See §7.3. |
 | `meter_events` | sequence | no | — | Time signature changes within this section. See §7.4. |
@@ -254,9 +262,13 @@ arrangement:
       strings: melody_a    # same pattern, different instrument
 ```
 
+A section is NOT required to bind a pattern to every track. Tracks that are not bound in a section are **silent** for the duration of that section (sparse arrangement). They do not continue playing the pattern from a previous section.
+
 ### 7.1 Section Length
 
 When multiple patterns are activated in a section, they SHOULD have the same number of bars. If pattern lengths differ, shorter patterns loop from their first bar to fill the section length determined by the longest pattern. For example, a 1-bar drum pattern in a 2-bar section plays its single bar twice.
+
+Looping is by **bar index**: the shorter pattern's bars repeat in order (bar 1, bar 2, …, bar 1, …). When `meter_events` change the time signature mid-section, each looped bar adopts the meter in effect at its **absolute bar position** in the section, not the meter of its original position. A looped bar whose content was written for a different meter is subject to the normal bar validation rules under the effective meter.
 
 ### 7.2 Arrangement Expansion
 
@@ -350,7 +362,8 @@ A note event is a YAML mapping representing a single musical moment — a note, 
 | `note` | string or sequence | **yes** (unless rest) | — | Pitch or list of pitches for chords. |
 | `dur` | string | **yes** (unless `dur_beats`) | — | Duration token. See §10. |
 | `dur_beats` | number | **yes** (unless `dur`) | — | Numeric duration in quarter-note beats. See §10.5. |
-| `vel` | integer | no | 80 | Velocity (1–127). Velocity 0 is excluded because MIDI velocity 0 is an alias for note-off; muq uses explicit durations for note-off timing. |
+| `vel` | integer | no | 80 | Velocity (1–127). Velocity 0 is excluded because MIDI velocity 0 is an alias for note-off; muq uses explicit durations for note-off timing. Mutually exclusive with `dyn`. |
+| `dyn` | string | no | (none) | Dynamic marking (`pp`, `mf`, `f`, …) as a musician-friendly alternative to `vel`. See §8.4. Mutually exclusive with `vel`. |
 | `beat` | number | no | (sequential) | Beat position within bar. See §11. |
 | `tie` | boolean | no | false | If true, this note is tied to the same pitch in the next event. |
 | `voice` | integer | no | (none) | Voice number for polyphonic tie disambiguation. See §13.2. |
@@ -373,13 +386,15 @@ Note events MAY include an `articulation` key to specify performance markings. A
 |-------|--------------|-------------------|-------------|
 | `staccato` | ×0.5 | — | Short, detached. |
 | `staccatissimo` | ×0.25 | — | Very short, very detached. |
-| `legato` | ×1.0 | — | Full duration, smooth connection. |
+| `legato` | ×1.05 | — | Smooth connection: the note overlaps slightly into the next, triggering legato/mono transitions on synths and sample libraries. |
 | `tenuto` | ×1.0 | +10 | Full duration, slightly emphasized. |
 | `accent` | — | +20 | Emphasized attack. |
 | `marcato` | ×0.85 | +30 | Heavy accent with slight shortening. |
 | `portato` | ×0.75 | — | Between legato and staccato. |
 
 Gate modifiers are multiplicative: a quarter note (`q` = 1 beat) with `staccato` sounds for 0.5 beats. The "—" entries mean no change from default behavior (default gate = 1.0, velocity as written or default 80).
+
+The `legato` gate exceeds 1.0 deliberately: equal-length back-to-back notes (gate 1.0) leave no overlap, which many synths and samplers require to engage legato transitions. Converters MUST still apply same-pitch overlap clamping (§C.5) so a legato note never overlaps a following note of the same pitch.
 
 Velocity modifiers are additive and applied **after** the event's `vel` value. The result is clamped to 1–127.
 
@@ -388,6 +403,39 @@ Articulations are only valid on note events. Setting `articulation` on a rest or
 ```yaml
 - {note: C4, dur: q, articulation: staccato}       # sounds for 0.5 beats
 - {note: E4, dur: q, vel: 100, articulation: accent} # vel = min(120, 127) = 120
+```
+
+### 8.4 Dynamics
+
+Note events MAY use a `dyn` key with a semantic dynamic marking instead of a raw `vel` value. This is how musicians think about loudness — *forte*, not *96*.
+
+| Value | Name | Velocity |
+|-------|------|----------|
+| `ppp` | pianississimo | 16 |
+| `pp` | pianissimo | 32 |
+| `p` | piano | 48 |
+| `mp` | mezzo-piano | 64 |
+| `mf` | mezzo-forte | 80 |
+| `f` | forte | 96 |
+| `ff` | fortissimo | 112 |
+| `fff` | fortississimo | 127 |
+| `sfz` | sforzando | 112 |
+
+Rules:
+
+- `dyn` and `vel` are **mutually exclusive**. An event with both is invalid (`DYN_VEL_CONFLICT`).
+- An unrecognized `dyn` value is invalid (`INVALID_DYNAMIC`).
+- `dyn` resolves to the velocity in the table above **before** articulation velocity modifiers are applied (§8.3). `{note: C4, dur: q, dyn: f, articulation: accent}` produces velocity 96 + 20 = 116.
+- `mf` equals the default velocity (80); writing it is allowed but redundant.
+- `sfz` denotes a sudden strong accent on a single note. It maps to velocity 112; combine with `articulation: accent` or `marcato` for an even sharper attack.
+- `dyn` is only valid on note events.
+- Canonical form preserves `dyn` as written; it is NOT rewritten to `vel`.
+- Crescendo/diminuendo hairpins are reserved for a future version; use CC 11 (expression) automation in the meantime.
+
+```yaml
+- {note: C4, dur: q, dyn: pp}    # whisper
+- {note: E4, dur: q, dyn: f}     # strong
+- {note: G4, dur: q, dyn: sfz, articulation: marcato}  # stabbed
 ```
 
 ## 9. Pitch Notation
@@ -529,6 +577,8 @@ To convert any duration to MIDI ticks: `ticks = duration_in_beats * PPQ` where P
 
 Events within a bar are positioned in time using one of two modes. Both modes can coexist within the same bar.
 
+**Beat unit:** beat positions are always expressed in **quarter-note units**, regardless of the time signature's denominator. In `6/8` (3 quarter notes per bar), the six eighth notes fall at positions `1, 1.5, 2, 2.5, 3, 3.5` — NOT `1..6`. This matches the quarter-note basis used by `dur_beats`, `offset_beats`, and tempo (QPM) throughout the format.
+
 ### 11.1 Sequential Mode
 
 If an event does **not** have a `beat` key, it is in **sequential mode**. Its start position is determined by the end position of the previous event in the bar.
@@ -621,12 +671,12 @@ The optional `offset_beats` field displaces an event from its computed beat posi
 When converting to MIDI, the final event time is computed by applying timing layers in this order:
 
 1. **Base position**: beat-addressed position or sequential cursor position (1-indexed).
-2. **Swing**: if the pattern has `swing` ≠ 50 and the event is on an off-beat eighth, apply swing displacement (see §6.3).
+2. **Swing**: if the pattern has `swing` ≠ 50 and the event is on the offbeat of a swing pair, apply swing displacement (see §6.3). This applies to all beat-positioned events: notes, automation, and text.
 3. **Offset**: add `offset_beats` to the swung position.
 4. **Tick conversion**: convert to absolute MIDI ticks.
 
 ```
-swung_position = apply_swing(base_position, pattern.swing)
+swung_position = apply_swing(base_position, pattern.swing, pattern.swing_unit)
 final_position = swung_position + offset_beats
 absolute_beats = bar_start_beats + (final_position - 1)
 actual_tick    = round(absolute_beats × PPQ)
@@ -809,7 +859,13 @@ The `interp` field describes how to transition **from the previous value** of th
 - `"step"` (default): The value changes instantly at this event's beat position. This is the standard MIDI behavior.
 - `"linear"`: The value ramps linearly from the previous event's value to this event's value over the time between the two events.
 
-If no previous event exists for the same controller in the current pattern, the starting value is **0** (for CC and aftertouch) or **0 / center** (for pitch bend).
+If no previous event exists for the same controller in the current pattern, `interp: linear` **degrades to `step`**: the value changes instantly at this event's position. There is no implicit ramp from 0 — ramping a filter or expression controller up from zero at the start of a pattern is almost never the intended sound. To ramp from a known starting value, place an explicit first event:
+
+```yaml
+# Explicit ramp from 20 to 120 — first event sets the starting value
+- {beat: 1, cc: 74, value: 20}
+- {beat: 4, cc: 74, value: 120, interp: linear}
+```
 
 ```yaml
 # Linear filter sweep from 20 to 120 over beats 1-4
@@ -923,13 +979,13 @@ Rules:
 1. Events use YAML flow mapping style: `{note: C4, dur: q}`.
 2. Note names are uppercase (`C4` not `c4`).
 3. Drum names are lowercase (`kick` not `Kick`).
-4. Key order for note events: `beat`, `note`, `dur`, `dur_beats`, `vel`, `tie`, `voice`, `offset_beats`, `articulation`.
+4. Key order for note events: `beat`, `note`, `dur`, `dur_beats`, `vel`, `dyn`, `tie`, `voice`, `offset_beats`, `articulation`.
 5. Key order for rest events: `beat`, `rest`, `rest_beats`.
 6. Key order for CC events: `beat`, `cc`, `value`, `interp`, `offset_beats`.
 7. Key order for pitch bend events: `beat`, `pitch_bend`, `interp`, `offset_beats`.
 8. Key order for aftertouch events: `beat`, `aftertouch`, `interp`, `offset_beats`.
 9. Key order for text events: `beat`, `text`, `type`, `offset_beats`.
-10. Default values are omitted (e.g. `vel: 80` is not written; `interp: step` is not written; `offset_beats: 0` is not written; `type: text` is not written on text events; `notation: pitched` is not written on patterns).
+10. Default values are omitted (e.g. `vel: 80` is not written; `interp: step` is not written; `offset_beats: 0` is not written; `type: text` is not written on text events; `notation: pitched` is not written on patterns; `swing_unit: 8` is not written on patterns). `dyn` is preserved as written and never rewritten to `vel` (`dyn: mf` is kept even though it equals the default velocity).
 11. Top-level keys appear in order: `song`, `tracks`, `patterns`, `arrangement`, `drum_map`.
 12. Arrangement `patterns` uses YAML block mapping style (one track→pattern per line).
 13. Bars are represented as YAML block sequences of flow mappings.
@@ -980,6 +1036,7 @@ Implementations MUST detect and report the following error classes:
 | `MIXED_PITCH_NOTATION` | Pattern contains note events that do not match its declared `notation` style. |
 | `INVALID_NOTATION` | `notation` is not `"pitched"` or `"percussion"`. |
 | `MIXED_BAR_POSITIONING` | A bar contains note/rest events with both sequential and beat-addressed positioning. See §11.3. |
+| `INVALID_SWING_UNIT` | `swing_unit` is not `8` or `16`. |
 
 ### 18.5 Event Errors
 
@@ -996,6 +1053,8 @@ Implementations MUST detect and report the following error classes:
 | `INVALID_PITCH` | Pitch string does not match the pitch grammar (see §9). |
 | `PITCH_OUT_OF_RANGE` | Computed MIDI note number is outside 0–127. |
 | `INVALID_VELOCITY` | Velocity is not an integer 1–127. |
+| `INVALID_DYNAMIC` | `dyn` is not a recognized dynamic marking (see §8.4), or is set on a non-note event. |
+| `DYN_VEL_CONFLICT` | Event has both `dyn` and `vel`. |
 | `INVALID_VOICE` | `voice` is not an integer. |
 | `UNKNOWN_DRUM_NAME` | Drum name is not in default or custom drum map. |
 | `INVALID_CC_NUMBER` | CC number is not an integer 0–127. |
@@ -1025,6 +1084,7 @@ Implementations MUST detect and report the following error classes:
 | `UNKNOWN_TRACK_IN_SECTION` | Section `patterns` mapping references a track not defined in `tracks`. |
 | `INVALID_REPEAT` | Repeat count is not a positive integer. |
 | `INVALID_SECTION_TEMPO` | Section tempo override is not a valid QPM value. |
+| `INVALID_KEY_SIGNATURE` | Section `key` override does not match the key grammar (also used for `song.key`, see §18.8). |
 | `TEMPO_EVENT_OUT_OF_RANGE` | A `tempo_events` entry has a `bar` exceeding the section's bar count. |
 | `INVALID_TEMPO_EVENT` | A tempo event is missing required fields or has invalid values. |
 | `METER_EVENT_OUT_OF_RANGE` | A `meter_events` entry has a `bar` exceeding the section's bar count. |
@@ -1037,7 +1097,7 @@ Implementations MUST detect and report the following error classes:
 
 | Error | Description |
 |-------|-------------|
-| `INVALID_KEY_SIGNATURE` | `key` string does not match the grammar `<tonic> <mode>` with a recognized tonic and mode. |
+| `INVALID_KEY_SIGNATURE` | `key` string (song-level or section-level) does not match the grammar `<tonic> <mode>` with a recognized tonic and mode. |
 
 ### 18.9 Tie Errors
 
@@ -1060,9 +1120,9 @@ The following features are being considered for future spec versions and are NOT
 - **Program change events**: Mid-song instrument changes within a track (e.g. switching from clean to distorted guitar).
 - **Pattern-level repeat**: A `repeat` key on the pattern `bars` level to reduce duplication of repeated phrases within a pattern.
 - **Volta brackets / multiple endings**: First/second ending structures for repeat-with-alternate-ending workflows.
-- **Dynamic markings**: Semantic dynamics (`pp`, `p`, `mp`, `mf`, `f`, `ff`, `sfz`) mapped to velocity ranges, as an alternative to raw velocity values.
+- **Crescendo / diminuendo hairpins**: Gradual dynamic changes between dynamic markings (§8.4 covers fixed per-note dynamics; gradual changes currently require CC 11 automation).
 - **Extended articulations**: Additional articulations for orchestral writing (pizzicato, arco, tremolo, col legno, harmonics, sul ponticello, con sordino, glissando).
-- **Per-event swing / per-track swing**: Finer-grained swing control beyond pattern-level, enabling different swing amounts for different instruments within a pattern.
+- **Per-event swing / per-track swing**: Finer-grained swing control beyond pattern-level (`swing`/`swing_unit`), enabling different swing amounts for different instruments within a section. Today this is achievable by giving each track its own pattern with its own swing settings.
 - **File includes / imports**: Splitting large compositions across files with a `$ref`-like mechanism for multi-movement works or shared pattern libraries.
 - **Automation pattern layering**: Allowing multiple patterns per track per section (or a separate `automation` mapping) to separate note data from CC/pitch bend data for reusability.
 
@@ -1355,7 +1415,11 @@ When converting to Standard MIDI File (SMF):
 
 ### C.2 Track Mapping
 
-Each muq track maps to a separate MIDI track in a Type 1 MIDI file. The first MIDI track (track 0) contains tempo and time signature meta-events only.
+Each muq track maps to a separate MIDI track in a Type 1 MIDI file. The first MIDI track (track 0) contains tempo and time signature meta-events, plus section markers (§C.2.1).
+
+#### C.2.1 Section Markers
+
+Exporters SHOULD emit each arrangement section's `name` as a Marker meta-event (FF 06) on track 0 at the section's start tick. When a section has `repeat`, only one marker is emitted at the first repetition's start. This gives DAW users named navigation points that mirror the arrangement.
 
 ### C.3 Track Initialization
 

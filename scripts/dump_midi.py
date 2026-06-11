@@ -19,9 +19,8 @@ import mido
 # ---------------------------------------------------------------------------
 # Reverse lookup tables (GM)
 # ---------------------------------------------------------------------------
-
 # Canonical GM program → name (import from muq.gm)
-from muq.gm import GM_INSTRUMENTS, GM_DRUM_MAP, DURATION_TOKENS
+from muq.gm import DURATION_TOKENS, GM_DRUM_MAP, GM_INSTRUMENTS
 
 GM_PROGRAM_TO_NAME: dict[int, str] = {v: k for k, v in GM_INSTRUMENTS.items()}
 

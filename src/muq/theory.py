@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 
-
 # ---------------------------------------------------------------------------
 # Duration tokens & articulations
 # ---------------------------------------------------------------------------
@@ -24,11 +23,24 @@ DURATION_TOKENS: dict[str, float] = {
 ARTICULATIONS: dict[str, tuple[float | None, int | None]] = {
     "staccato": (0.5, None),
     "staccatissimo": (0.25, None),
-    "legato": (1.0, None),
+    "legato": (1.05, None),
     "tenuto": (1.0, 10),
     "accent": (None, 20),
     "marcato": (0.85, 30),
     "portato": (0.75, None),
+}
+
+# Dynamic marking → MIDI velocity (spec §8.4)
+DYNAMICS: dict[str, int] = {
+    "ppp": 16,
+    "pp": 32,
+    "p": 48,
+    "mp": 64,
+    "mf": 80,
+    "f": 96,
+    "ff": 112,
+    "fff": 127,
+    "sfz": 112,
 }
 
 
@@ -92,7 +104,7 @@ def pitch_to_midi(pitch: str) -> int:
     try:
         octave = int(octave_str)
     except ValueError:
-        raise ValueError(f"Invalid octave in pitch: {pitch}")
+        raise ValueError(f"Invalid octave in pitch: {pitch}") from None
     midi_note = (octave + 1) * 12 + semitone
     if not 0 <= midi_note <= 127:
         raise ValueError(f"MIDI note {midi_note} out of range for pitch: {pitch}")

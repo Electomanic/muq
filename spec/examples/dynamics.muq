@@ -1,0 +1,45 @@
+song:
+  title: Dynamics Demo
+  tempo: 96
+  time: "4/4"
+  key: C major
+  scale_mode: warn
+
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+
+patterns:
+  theme:
+    bars:
+    -
+      - {note: C4, dur: q, dyn: p}
+      - {note: E4, dur: q, dyn: mp}
+      - {note: G4, dur: q, dyn: mf}
+      - {note: C5, dur: q, dyn: f}
+    -
+      - {note: B4, dur: h, dyn: ff}
+      - {note: G4, dur: q, dyn: sfz, articulation: marcato}
+      - {note: C5, dur: q, dyn: fff}
+  theme_up:
+    swing: 58
+    swing_unit: 16
+    bars:
+    -
+      - {beat: 1, note: D4, dur: s, dyn: mp}
+      - {beat: 1.25, note: F#4, dur: s, dyn: p}
+      - {beat: 1.5, note: A4, dur: s, dyn: mp}
+      - {beat: 1.75, note: D5, dur: s, dyn: p}
+      - {beat: 2, note: A4, dur: s, dyn: mp}
+      - {beat: 2.25, note: F#4, dur: s, dyn: p}
+      - {beat: 2.5, note: D4, dur: qd, dyn: mf}
+
+arrangement:
+  - name: statement
+    patterns:
+      piano: theme
+  - name: answer
+    key: D major
+    patterns:
+      piano: theme_up

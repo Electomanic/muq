@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from io import StringIO
 
-from muq.theory import is_pitched_notation
 from muq.model import (
     AftertouchEvent,
     CCEvent,
@@ -14,6 +13,7 @@ from muq.model import (
     RestEvent,
     TextEvent,
 )
+from muq.theory import is_pitched_notation
 
 
 def fmt(doc: MuqDocument) -> str:
@@ -95,6 +95,8 @@ def _write_patterns(out: StringIO, doc: MuqDocument) -> None:
             out.write(f"    notation: {pattern.notation}\n")
         if pattern.swing != 50:
             out.write(f"    swing: {pattern.swing}\n")
+        if pattern.swing_unit != 8:
+            out.write(f"    swing_unit: {pattern.swing_unit}\n")
         out.write("    bars:\n")
         for bar in pattern.bars:
             if not bar:
@@ -113,6 +115,8 @@ def _write_arrangement(out: StringIO, doc: MuqDocument) -> None:
             out.write(f"    tempo: {_num(section.tempo)}\n")
         if section.time is not None:
             out.write(f"    time: \"{section.time}\"\n")
+        if section.key is not None:
+            out.write(f"    key: {_yaml_scalar(_normalize_key(section.key))}\n")
         if section.repeat != 1:
             out.write(f"    repeat: {section.repeat}\n")
         if section.tie_across:
@@ -157,7 +161,7 @@ def _event_to_flow(event) -> str:
 
 
 def _note_flow(e: NoteEvent) -> str:
-    # Key order: beat, note, dur, dur_beats, vel, tie, voice, offset_beats, articulation
+    # Key order: beat, note, dur, dur_beats, vel, dyn, tie, voice, offset_beats, articulation
     parts: list[str] = []
     if e.beat is not None:
         parts.append(f"beat: {_num(e.beat)}")
@@ -171,8 +175,10 @@ def _note_flow(e: NoteEvent) -> str:
         parts.append(f"dur: {e.dur}")
     if e.dur_beats is not None:
         parts.append(f"dur_beats: {_num(e.dur_beats)}")
-    # Omit defaults
-    if e.vel != 80:
+    # Omit defaults; dyn is preserved as written, never rewritten to vel
+    if e.dyn is not None:
+        parts.append(f"dyn: {e.dyn}")
+    elif e.vel != 80:
         parts.append(f"vel: {e.vel}")
     if e.tie:
         parts.append("tie: true")

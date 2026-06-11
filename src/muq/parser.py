@@ -24,11 +24,9 @@ from muq.model import (
     Track,
 )
 
-# Schema lives in spec/ for development, but is bundled alongside the
-# package for installed wheels (see pyproject.toml data includes).
+# The schema is bundled with the package. The canonical copy lives in
+# spec/muq.schema.json; a test asserts the two stay in sync.
 _SCHEMA_PATH = Path(__file__).resolve().parent / "muq.schema.json"
-if not _SCHEMA_PATH.exists():
-    _SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "spec" / "muq.schema.json"
 
 _SCHEMA_CACHE: dict | None = None
 
@@ -50,6 +48,7 @@ def _parse_event(d: dict) -> (
             dur=d.get("dur"),
             dur_beats=d.get("dur_beats"),
             vel=d.get("vel", 80),
+            dyn=d.get("dyn"),
             beat=d.get("beat"),
             tie=d.get("tie", False),
             voice=d.get("voice"),
@@ -99,7 +98,12 @@ def _parse_pattern(name: str, d: dict) -> Pattern:
     for bar_data in d["bars"]:
         bar = [_parse_event(ev) for ev in (bar_data or [])]
         bars.append(bar)
-    return Pattern(bars=bars, notation=d.get("notation", "pitched"), swing=d.get("swing", 50))
+    return Pattern(
+        bars=bars,
+        notation=d.get("notation", "pitched"),
+        swing=d.get("swing", 50),
+        swing_unit=d.get("swing_unit", 8),
+    )
 
 
 def _parse_track(name: str, d: dict) -> Track:
@@ -129,6 +133,7 @@ def _parse_section(d: dict) -> Section:
         repeat=d.get("repeat", 1),
         tempo=d.get("tempo"),
         time=d.get("time"),
+        key=d.get("key"),
         tie_across=d.get("tie_across", False),
         tempo_events=tempo_events,
         meter_events=meter_events,
@@ -166,7 +171,9 @@ def parse(source: str | Path) -> MuqDocument:
     try:
         jsonschema.validate(raw, schema)
     except jsonschema.ValidationError as e:
-        raise ParseError(f"Schema validation failed: {e.message}") from e
+        raise ParseError(
+            f"Schema validation failed at {e.json_path}: {e.message}"
+        ) from e
 
     # Build model
     song_d = raw["song"]

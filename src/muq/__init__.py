@@ -1,8 +1,8 @@
 """muq — parser, validator, and MIDI exporter for the muq music format."""
 
+from muq.midi import save_midi, to_midi
 from muq.parser import parse
-from muq.validate import validate
 from muq.resolve import resolve, resolve_pattern
-from muq.midi import to_midi, save_midi
+from muq.validate import validate
 
 __all__ = ["parse", "validate", "resolve", "resolve_pattern", "to_midi", "save_midi"]

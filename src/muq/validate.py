@@ -3,34 +3,32 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from muq.gm import (
-    GM_DRUM_MAP,
     gm_instrument_lookup,
     resolve_drum_name,
+)
+from muq.model import (
+    AftertouchEvent,
+    CCEvent,
+    MuqDocument,
+    NoteEvent,
+    Pattern,
+    PitchBendEvent,
+    RestEvent,
+    TextEvent,
 )
 from muq.theory import (
     ARTICULATIONS,
     DURATION_TOKENS,
-    event_dur_beats,
+    DYNAMICS,
     beats_per_bar,
+    event_dur_beats,
     is_pitched_notation,
     is_valid_key,
-    parse_time_signature,
     pitch_to_midi,
     scale_pitch_classes,
-)
-from muq.model import (
-    MuqDocument,
-    NoteEvent,
-    RestEvent,
-    CCEvent,
-    PitchBendEvent,
-    AftertouchEvent,
-    TextEvent,
-    Pattern,
-    Section,
 )
 
 
@@ -311,10 +309,11 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
             _check_chord_ties(bar, bar_path, diags)
 
     # Phase 2: Per-binding semantic validation (pitch + scale)
-    validated_bindings: set[tuple[str, str]] = set()
+    validated_bindings: set[tuple[str, str, str | None]] = set()
     for section in doc.arrangement:
+        effective_key = section.key if section.key else doc.song.key
         for track_name, pat_name in section.patterns.items():
-            binding_key = (track_name, pat_name)
+            binding_key = (track_name, pat_name, effective_key)
             if binding_key in validated_bindings:
                 continue
             validated_bindings.add(binding_key)
@@ -333,12 +332,13 @@ def _validate_patterns(doc: MuqDocument, diags: list[Diagnostic]) -> None:
                             event, f"{path}.bars[{bi}][{ei}]",
                             is_perc, per_track_map, doc.drum_map, diags)
 
-            # Scale validation (§4.4) — only for pitched bindings
+            # Scale validation (§4.4) — only for pitched bindings, against
+            # the key active in this section (§7)
             if (not is_perc
                     and pattern.notation == "pitched"
-                    and doc.song.key
+                    and effective_key
                     and doc.song.scale_mode in ("warn", "strict")):
-                pcs = scale_pitch_classes(doc.song.key)
+                pcs = scale_pitch_classes(effective_key)
                 if pcs is not None:
                     severity = "error" if doc.song.scale_mode == "strict" else "warning"
                     _check_scale(pattern, pcs, severity, path, diags)
@@ -384,9 +384,9 @@ def _validate_event(
     if isinstance(event, NoteEvent):
         _validate_note_event(event, path, song, diags)
         if event.voice is not None and not isinstance(event.voice, int):
-            diags.append(Diagnostic("INVALID_VOICE", f"voice must be an integer", path=path))
+            diags.append(Diagnostic("INVALID_VOICE", "voice must be an integer", path=path))
         if event.offset_beats != 0 and not isinstance(event.offset_beats, (int, float)):
-            diags.append(Diagnostic("INVALID_OFFSET_BEATS", f"offset_beats must be a number", path=path))
+            diags.append(Diagnostic("INVALID_OFFSET_BEATS", "offset_beats must be a number", path=path))
     elif isinstance(event, RestEvent):
         if event.rest_beats is not None and event.rest_beats <= 0:
             diags.append(Diagnostic("INVALID_REST_BEATS", "rest_beats must be > 0", path=path))
@@ -443,11 +443,20 @@ def _validate_note_event(
     if event.dur and event.dur not in DURATION_TOKENS:
         diags.append(Diagnostic("INVALID_DURATION", f"Unknown duration token: {event.dur}", path=path))
     if event.dur_beats is not None and event.dur_beats <= 0:
-        diags.append(Diagnostic("INVALID_DURATION_BEATS", f"dur_beats must be positive", path=path))
+        diags.append(Diagnostic("INVALID_DURATION_BEATS", "dur_beats must be positive", path=path))
 
-    # Velocity
+    # Velocity / dynamics
     if not (1 <= event.vel <= 127):
         diags.append(Diagnostic("INVALID_VELOCITY", f"Velocity {event.vel} out of range 1-127", path=path))
+    if event.dyn is not None:
+        if event.dyn not in DYNAMICS:
+            diags.append(Diagnostic("INVALID_DYNAMIC",
+                                    f"Unknown dynamic marking: {event.dyn}", path=path))
+        if event.vel != 80:
+            # Parser leaves vel at default 80 when absent; any other value
+            # means both keys were written (schema also rejects this).
+            diags.append(Diagnostic("DYN_VEL_CONFLICT",
+                                    "Event has both dyn and vel", path=path))
 
     # Articulation
     if event.articulation and event.articulation not in ARTICULATIONS:
@@ -486,9 +495,9 @@ def _validate_arrangement(doc: MuqDocument, diags: list[Diagnostic]) -> None:
     for si, section in enumerate(doc.arrangement):
         path = f"arrangement[{si}]"
         if section.repeat is not None and section.repeat < 1:
-            diags.append(Diagnostic("INVALID_REPEAT", f"Repeat must be >= 1", path=path))
+            diags.append(Diagnostic("INVALID_REPEAT", "Repeat must be >= 1", path=path))
         if section.repeat is not None and section.repeat > 9999:
-            diags.append(Diagnostic("INVALID_REPEAT", f"Repeat must be <= 9999", path=path))
+            diags.append(Diagnostic("INVALID_REPEAT", "Repeat must be <= 9999", path=path))
 
         # Determine effective time signature for this section
         effective_time = section.time if section.time else doc.song.time
@@ -509,6 +518,10 @@ def _validate_arrangement(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 
         if section.time is not None:
             _check_time_sig(section.time, f"{path}.time", diags)
+
+        if section.key is not None and not is_valid_key(section.key):
+            diags.append(Diagnostic("INVALID_KEY_SIGNATURE",
+                                    f"Invalid section key: {section.key}", path=f"{path}.key"))
 
         for track_name, pat_name in section.patterns.items():
             if track_name not in doc.tracks:
@@ -534,7 +547,7 @@ def _validate_arrangement(doc: MuqDocument, diags: list[Diagnostic]) -> None:
 
         # Determine bar count from the longest pattern in the section
         max_bars = 0
-        for track_name, pat_name in section.patterns.items():
+        for pat_name in section.patterns.values():
             if pat_name in doc.patterns:
                 max_bars = max(max_bars, len(doc.patterns[pat_name].bars))
 

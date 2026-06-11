@@ -11,13 +11,6 @@ from muq.gm import (
     resolve_drum_name,
     resolve_pan,
 )
-from muq.theory import (
-    ARTICULATIONS,
-    event_dur_beats,
-    beats_per_bar,
-    parse_time_signature,
-    pitch_to_midi,
-)
 from muq.ir import (
     ResolvedAftertouch,
     ResolvedCC,
@@ -40,12 +33,21 @@ from muq.model import (
     TextEvent,
     Track,
 )
+from muq.theory import (
+    ARTICULATIONS,
+    DYNAMICS,
+    beats_per_bar,
+    event_dur_beats,
+    parse_time_signature,
+    pitch_to_midi,
+)
 
 
 def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
     """Expand arrangement into a ResolvedSong with absolute tick times."""
     tempos: list[ResolvedTempo] = []
     time_sigs: list[ResolvedTimeSig] = []
+    markers: list[ResolvedText] = []
     resolved_tracks: dict[str, _TrackAccum] = {}
 
     # Initialize accumulators per track
@@ -78,7 +80,7 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
         if not prev_tie_across:
             for accum in resolved_tracks.values():
                 if accum.pending_ties:
-                    for (midi_note, voice), rn in accum.pending_ties.items():
+                    for (midi_note, _voice) in accum.pending_ties:
                         warnings.warn(
                             f"TIE_ACROSS_NO_MATCH: dangling tie on track '{accum.name}' "
                             f"note {midi_note} dropped at section boundary",
@@ -104,7 +106,15 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
                 numerator=n, denominator=d,
             ))
 
-        for rep in range(section.repeat):
+        # Section marker at the start of the section (§C.2.1) — one per
+        # section, not per repetition
+        markers.append(ResolvedText(
+            tick=round(song_beat_cursor * ppq),
+            text=section.name,
+            type="marker",
+        ))
+
+        for _rep in range(section.repeat):
             rep_beat_cursor = song_beat_cursor
             active_time = current_time
 
@@ -125,7 +135,7 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
 
             # Determine bar count from longest pattern in section
             max_bars = 0
-            for tname, pname in section.patterns.items():
+            for pname in section.patterns.values():
                 if pname in doc.patterns:
                     max_bars = max(max_bars, len(doc.patterns[pname].bars))
 
@@ -171,7 +181,7 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
                     else:
                         bpb = beats_per_bar(effective_time)
                     _resolve_bar(
-                        bar, bar_beat_pos, bpb, pattern.swing,
+                        bar, bar_beat_pos, bpb, pattern.swing, pattern.swing_unit,
                         track, doc, ppq, accum,
                     )
                     bar_beat_pos += bpb
@@ -189,10 +199,10 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
 
     # Build final resolved tracks
     tracks_out = []
-    for tname, accum in resolved_tracks.items():
+    for accum in resolved_tracks.values():
         # Warn about unterminated ties at end of song
         if accum.pending_ties:
-            for (midi_note, voice), rn in accum.pending_ties.items():
+            for (midi_note, _voice) in accum.pending_ties:
                 warnings.warn(
                     f"TIE_ACROSS_NO_MATCH: unterminated tie at end of song "
                     f"on track '{accum.name}' note {midi_note}",
@@ -223,6 +233,7 @@ def resolve(doc: MuqDocument, ppq: int = 480) -> ResolvedSong:
         tempos=tempos,
         time_signatures=time_sigs,
         tracks=tracks_out,
+        markers=markers,
     )
 
 
@@ -239,8 +250,22 @@ def resolve_pattern(
     pattern = doc.patterns[pattern_name]
     is_perc = pattern.notation == "percussion"
 
-    # Build a minimal track-like context for _resolve_bar
-    if is_perc:
+    # Prefer a real track that uses this pattern in the arrangement so the
+    # clip inherits its drum_map / percussion context; otherwise fall back
+    # to a minimal dummy context based on the pattern's notation.
+    context_track = None
+    for section in doc.arrangement:
+        for track_name, pat_name in section.patterns.items():
+            if pat_name == pattern_name and track_name in doc.tracks:
+                context_track = doc.tracks[track_name]
+                break
+        if context_track is not None:
+            break
+
+    if context_track is not None:
+        dummy_track = context_track
+        is_perc = context_track.is_percussion
+    elif is_perc:
         dummy_track = Track(instrument="standard", channel=10, percussion=True)
     else:
         dummy_track = Track(instrument="acoustic_grand_piano", channel=1)
@@ -264,7 +289,7 @@ def resolve_pattern(
     bpb = beats_per_bar(time)
     for bar in pattern.bars:
         _resolve_bar(
-            bar, bar_beat_pos, bpb, pattern.swing,
+            bar, bar_beat_pos, bpb, pattern.swing, pattern.swing_unit,
             dummy_track, doc, ppq, accum,
         )
         bar_beat_pos += bpb
@@ -353,18 +378,19 @@ def _clamp_same_pitch_overlaps(notes: list[ResolvedNote]) -> None:
 # _event_dur_beats is now event_dur_beats() in theory.py
 
 
-def _apply_swing(base_beat: float, swing: int) -> float:
+def _apply_swing(base_beat: float, swing: int, swing_unit: int = 8) -> float:
     """Apply swing to a beat position within a bar (1-indexed).
 
-    Swing affects off-beat eighth notes (positions at 0.5 mod 1.0).
-    Formula from §6.3: swung_position = floor(b) + swing/100
+    Swing displaces the offbeat of each swing pair (§6.3). A pair spans
+    1.0 beat for swing_unit 8 (two eighths) or 0.5 beats for swing_unit 16
+    (two sixteenths). swung = pair_start + span * swing/100.
     """
     if swing == 50:
         return base_beat
-    # Check if this beat is on an off-beat eighth (fractional part == 0.5)
-    frac = base_beat - math.floor(base_beat)
-    if abs(frac - 0.5) < 1e-6:
-        return math.floor(base_beat) + swing / 100.0
+    span = 1.0 if swing_unit == 8 else 0.5
+    pair_start = math.floor((base_beat - 1) / span) * span + 1
+    if abs(base_beat - (pair_start + span / 2)) < 1e-6:
+        return pair_start + span * swing / 100.0
     return base_beat
 
 
@@ -372,11 +398,12 @@ def _control_tick(
     event: CCEvent | PitchBendEvent | AftertouchEvent | TextEvent,
     bar_start_beats: float,
     swing: int,
+    swing_unit: int,
     ppq: int,
 ) -> int:
     """Compute the absolute tick for a beat-addressed control/text event."""
     base_pos = event.beat if event.beat is not None else 1.0
-    swung = _apply_swing(base_pos, swing)
+    swung = _apply_swing(base_pos, swing, swing_unit)
     final_pos = swung + event.offset_beats
     abs_beats = bar_start_beats + (final_pos - 1)
     return max(0, round(abs_beats * ppq))
@@ -387,6 +414,7 @@ def _resolve_bar(
     bar_start_beats: float,
     bpb: float,
     swing: int,
+    swing_unit: int,
     track: Track,
     doc: MuqDocument,
     ppq: int,
@@ -407,7 +435,7 @@ def _resolve_bar(
                 cursor += dur_beats
 
             # Timing layers: base → swing → offset → tick
-            swung = _apply_swing(base_pos, swing)
+            swung = _apply_swing(base_pos, swing, swing_unit)
             final_pos = swung + event.offset_beats
             abs_beats = bar_start_beats + (final_pos - 1)
             tick = round(abs_beats * ppq)
@@ -423,7 +451,8 @@ def _resolve_bar(
                 if v is not None:
                     vel_add = v
 
-            velocity = max(1, min(127, event.vel + vel_add))
+            velocity = DYNAMICS[event.dyn] if event.dyn in DYNAMICS else event.vel
+            velocity = max(1, min(127, velocity + vel_add))
             dur_ticks = max(1, round(dur_beats * gate * ppq))
 
             # Resolve pitches
@@ -433,7 +462,12 @@ def _resolve_bar(
                     midi_note = resolve_drum_name(
                         pitch_str, track.drum_map, doc.drum_map)
                     if midi_note is None:
-                        continue  # unknown drum, skip
+                        warnings.warn(
+                            f"UNKNOWN_DRUM_NAME: drum '{pitch_str}' not found in "
+                            f"any drum map; note skipped",
+                            stacklevel=2,
+                        )
+                        continue
                 else:
                     midi_note = pitch_to_midi(pitch_str)
 
@@ -468,7 +502,7 @@ def _resolve_bar(
                 cursor += dur_beats
 
         elif isinstance(event, CCEvent):
-            tick = _control_tick(event, bar_start_beats, swing, ppq)
+            tick = _control_tick(event, bar_start_beats, swing, swing_unit, ppq)
             accum.ccs.append(ResolvedCC(
                 tick=tick, channel=accum.channel,
                 cc=event.cc, value=event.value,
@@ -476,7 +510,7 @@ def _resolve_bar(
             ))
 
         elif isinstance(event, PitchBendEvent):
-            tick = _control_tick(event, bar_start_beats, swing, ppq)
+            tick = _control_tick(event, bar_start_beats, swing, swing_unit, ppq)
             accum.pitch_bends.append(ResolvedPitchBend(
                 tick=tick, channel=accum.channel,
                 value=event.pitch_bend,
@@ -484,7 +518,7 @@ def _resolve_bar(
             ))
 
         elif isinstance(event, AftertouchEvent):
-            tick = _control_tick(event, bar_start_beats, swing, ppq)
+            tick = _control_tick(event, bar_start_beats, swing, swing_unit, ppq)
             accum.aftertouches.append(ResolvedAftertouch(
                 tick=tick, channel=accum.channel,
                 value=event.aftertouch,
@@ -492,7 +526,7 @@ def _resolve_bar(
             ))
 
         elif isinstance(event, TextEvent):
-            tick = _control_tick(event, bar_start_beats, swing, ppq)
+            tick = _control_tick(event, bar_start_beats, swing, swing_unit, ppq)
             accum.texts.append(ResolvedText(
                 tick=tick, text=event.text, type=event.type,
             ))

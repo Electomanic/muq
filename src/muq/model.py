@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-
 # ---------------------------------------------------------------------------
 # Events
 # ---------------------------------------------------------------------------
@@ -15,6 +14,7 @@ class NoteEvent:
     dur: str | None = None
     dur_beats: float | None = None
     vel: int = 80
+    dyn: str | None = None
     beat: float | None = None
     tie: bool = False
     voice: int | None = None
@@ -76,6 +76,7 @@ class Pattern:
     bars: list[Bar]
     notation: str = "pitched"
     swing: int = 50
+    swing_unit: int = 8
 
 
 @dataclass
@@ -115,6 +116,7 @@ class Section:
     repeat: int = 1
     tempo: float | None = None
     time: str | None = None
+    key: str | None = None
     tie_across: bool = False
     tempo_events: list[TempoEvent] = field(default_factory=list)
     meter_events: list[MeterEvent] = field(default_factory=list)

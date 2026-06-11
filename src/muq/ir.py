@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -80,3 +80,4 @@ class ResolvedSong:
     tempos: list[ResolvedTempo]
     time_signatures: list[ResolvedTimeSig]
     tracks: list[ResolvedTrack]
+    markers: list[ResolvedText] = field(default_factory=list)

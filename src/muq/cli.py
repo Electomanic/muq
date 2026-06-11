@@ -13,15 +13,16 @@ from __future__ import annotations
 
 import argparse
 import sys
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as pkg_version
 from pathlib import Path
 
-from muq.parser import parse, ParseError
-from muq.validate import validate
-from muq.resolve import resolve, resolve_pattern
-from muq.midi import save_midi
 from muq.fmt import fmt
 from muq.ir import ResolvedSong
-
+from muq.midi import save_midi
+from muq.parser import ParseError, parse
+from muq.resolve import resolve, resolve_pattern
+from muq.validate import validate
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -68,6 +69,13 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="muq",
         description="muq — YAML-based music format tool",
     )
+    try:
+        _version = pkg_version("muq")
+    except PackageNotFoundError:
+        _version = "unknown"
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {_version}",
+    )
     sub = parser.add_subparsers(dest="command")
 
     # --- validate -----------------------------------------------------------
@@ -78,8 +86,10 @@ def _build_parser() -> argparse.ArgumentParser:
                     "schema violations, semantic errors, or warnings.",
     )
     p_val.add_argument("file", type=Path, help="Path to .muq file")
-
-    # --- info ---------------------------------------------------------------
+    p_val.add_argument(
+        "--strict", action="store_true",
+        help="Treat warnings as errors (non-zero exit code on warnings)",
+    )
     p_info = sub.add_parser(
         "info",
         help="Show song metadata, tracks, and patterns",
@@ -105,6 +115,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_fmt.add_argument(
         "-i", "--in-place", action="store_true",
         help="Overwrite the input file with formatted output",
+    )
+    p_fmt.add_argument(
+        "--check", action="store_true",
+        help="Don't write anything; exit 1 if the file is not canonically "
+             "formatted (useful in CI)",
     )
 
     # --- export (group) -----------------------------------------------------
@@ -205,6 +220,9 @@ def _cmd_validate(args) -> int:
         print(f"\n{len(errors)} error(s), {len(warnings)} warning(s)", file=sys.stderr)
         return 1
     if warnings:
+        if args.strict:
+            print(f"invalid (--strict: {len(warnings)} warning(s))", file=sys.stderr)
+            return 1
         print(f"valid ({len(warnings)} warning(s))", file=sys.stderr)
     else:
         print("valid", file=sys.stderr)
@@ -258,6 +276,14 @@ def _cmd_fmt(args) -> int:
         return 1
 
     output = fmt(doc)
+
+    if args.check:
+        original = args.file.read_text(encoding="utf-8")
+        if original != output:
+            print(f"would reformat {args.file}", file=sys.stderr)
+            return 1
+        print(f"{args.file} is canonically formatted", file=sys.stderr)
+        return 0
 
     if args.in_place:
         args.file.write_text(output, encoding="utf-8")
@@ -392,9 +418,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "export":
         target = getattr(args, "export_target", None)
         if not target:
-            # Show export help when no sub-command given
-            parser.parse_args(["export", "--help"])
-            return 1
+            print(
+                "error: export requires a sub-command: song, track, or pattern\n"
+                "Run 'muq export --help' for details.",
+                file=sys.stderr,
+            )
+            return 2
         return _EXPORT_DISPATCH[target](args)
     return 1
 

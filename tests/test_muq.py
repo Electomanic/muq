@@ -6,12 +6,19 @@ from pathlib import Path
 
 import pytest
 
-from muq.parser import parse, ParseError
-from muq.validate import validate
-from muq.resolve import resolve, resolve_pattern
-from muq.midi import to_midi
 from muq.fmt import fmt
-from muq.gm import pitch_to_midi, is_pitched_notation, DURATION_TOKENS, beats_per_bar, GM_INSTRUMENTS, GM_DRUM_MAP
+from muq.gm import (
+    DURATION_TOKENS,
+    GM_DRUM_MAP,
+    GM_INSTRUMENTS,
+    beats_per_bar,
+    is_pitched_notation,
+    pitch_to_midi,
+)
+from muq.midi import to_midi
+from muq.parser import ParseError, parse
+from muq.resolve import resolve, resolve_pattern
+from muq.validate import validate
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "spec" / "examples"
 INVALID_DIR = Path(__file__).resolve().parent.parent / "spec" / "invalid"
@@ -649,3 +656,383 @@ arrangement:
         for word in ("true", "false", "null", "yes", "no", "on", "off"):
             result = _yaml_scalar(word)
             assert result.startswith('"'), f"'{word}' should be quoted, got: {result}"
+
+
+# ---------------------------------------------------------------------------
+# Packaging / schema bundling
+# ---------------------------------------------------------------------------
+
+class TestSchemaBundle:
+    def test_bundled_schema_in_sync_with_spec(self):
+        """The schema bundled in the package must match the canonical spec copy."""
+        import muq
+        bundled = Path(muq.__file__).resolve().parent / "muq.schema.json"
+        canonical = Path(__file__).resolve().parent.parent / "spec" / "muq.schema.json"
+        assert bundled.exists(), "schema must be bundled inside the muq package"
+        assert bundled.read_text() == canonical.read_text(), (
+            "src/muq/muq.schema.json is out of sync with spec/muq.schema.json"
+        )
+
+    def test_spec_version_pattern_anchored(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+  spec_version: "1.2.3.4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  p:
+    bars:
+    - [{note: C4, dur: w}]
+arrangement:
+  - name: main
+    patterns:
+      piano: p
+"""
+        with pytest.raises(ParseError):
+            parse(yaml_str)
+
+
+# ---------------------------------------------------------------------------
+# Resolution warnings
+# ---------------------------------------------------------------------------
+
+class TestResolveWarnings:
+    def test_unknown_drum_name_warns(self):
+        yaml_str = """
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  drums:
+    instrument: standard
+    channel: 10
+patterns:
+  beat:
+    notation: percussion
+    bars:
+    - [{note: not_a_drum, dur: q}, {rest: hd}]
+arrangement:
+  - name: main
+    patterns:
+      drums: beat
+"""
+        doc = parse(yaml_str)
+        with pytest.warns(UserWarning, match="UNKNOWN_DRUM_NAME"):
+            resolved = resolve(doc, ppq=480)
+        # The unknown drum is skipped, not exported
+        assert resolved.tracks[0].notes == []
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+class TestCli:
+    def _write(self, tmp_path, text):
+        f = tmp_path / "song.muq"
+        f.write_text(text, encoding="utf-8")
+        return f
+
+    MINIMAL = """\
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  p:
+    bars:
+    - [{note: C4, dur: w}]
+arrangement:
+  - name: main
+    patterns:
+      piano: p
+"""
+
+    def test_version_flag(self, capsys):
+        from muq.cli import main
+        with pytest.raises(SystemExit) as exc:
+            main(["--version"])
+        assert exc.value.code == 0
+        assert capsys.readouterr().out.startswith("muq ")
+
+    def test_validate_ok(self, tmp_path):
+        from muq.cli import main
+        f = self._write(tmp_path, self.MINIMAL)
+        assert main(["validate", str(f)]) == 0
+
+    def test_validate_error_exit_code(self, tmp_path):
+        from muq.cli import main
+        f = self._write(tmp_path, "song:\n  tempo: 120\n")
+        assert main(["validate", str(f)]) == 1
+
+    def test_validate_strict_fails_on_warning(self, tmp_path):
+        from muq.cli import main
+        # drum_map on a non-percussion track -> warning only
+        warny = self.MINIMAL.replace(
+            "    channel: 1\n",
+            "    channel: 1\n    drum_map:\n      foo: 36\n",
+        )
+        f = self._write(tmp_path, warny)
+        assert main(["validate", str(f)]) == 0
+        assert main(["validate", "--strict", str(f)]) == 1
+
+    def test_fmt_check_clean_and_dirty(self, tmp_path):
+        from muq.cli import main
+        f = self._write(tmp_path, self.MINIMAL)
+        # Unformatted input -> --check fails
+        first = main(["fmt", "--check", str(f)])
+        # Normalize in place, then --check passes
+        assert main(["fmt", "-i", str(f)]) == 0
+        assert main(["fmt", "--check", str(f)]) == 0
+        # The original was either already canonical or not; after -i it must be
+        assert first in (0, 1)
+
+    def test_export_without_subcommand(self):
+        from muq.cli import main
+        assert main(["export"]) == 2
+
+    def test_export_song(self, tmp_path):
+        from muq.cli import main
+        f = self._write(tmp_path, self.MINIMAL)
+        out = tmp_path / "out.mid"
+        assert main(["export", "song", str(f), "-o", str(out)]) == 0
+        assert out.exists()
+
+
+# ---------------------------------------------------------------------------
+# Spec 1.0.0 features: dynamics, swing_unit, section key, legato, markers
+# ---------------------------------------------------------------------------
+
+def _doc_with_pattern(pattern_yaml: str, song_extra: str = "", section_extra: str = ""):
+    return parse(f"""
+song:
+  tempo: 120
+  time: "4/4"
+{song_extra}tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  p:
+{pattern_yaml}
+arrangement:
+  - name: main
+{section_extra}    patterns:
+      piano: p
+""")
+
+
+class TestDynamics:
+    def test_dyn_maps_to_velocity(self):
+        doc = _doc_with_pattern(
+            "    bars:\n"
+            "    - [{note: C4, dur: q, dyn: pp}, {note: D4, dur: q, dyn: f},\n"
+            "       {note: E4, dur: q, dyn: fff}, {note: F4, dur: q}]\n"
+        )
+        assert validate(doc) == []
+        resolved = resolve(doc)
+        vels = [n.velocity for n in resolved.tracks[0].notes]
+        assert vels == [32, 96, 127, 80]
+
+    def test_dyn_combines_with_articulation(self):
+        doc = _doc_with_pattern(
+            "    bars:\n"
+            "    - [{note: C4, dur: q, dyn: f, articulation: accent}, {rest: hd}]\n"
+        )
+        resolved = resolve(doc)
+        assert resolved.tracks[0].notes[0].velocity == 116  # 96 + 20
+
+    def test_dyn_vel_conflict_rejected_by_schema(self):
+        with pytest.raises(ParseError):
+            _doc_with_pattern(
+                "    bars:\n"
+                "    - [{note: C4, dur: q, dyn: f, vel: 90}, {rest: hd}]\n"
+            )
+
+    def test_unknown_dyn_rejected_by_schema(self):
+        with pytest.raises(ParseError):
+            _doc_with_pattern(
+                "    bars:\n"
+                "    - [{note: C4, dur: q, dyn: loudish}, {rest: hd}]\n"
+            )
+
+    def test_invalid_dynamic_semantic_diagnostic(self):
+        from muq.model import NoteEvent
+        doc = _doc_with_pattern("    bars:\n    - [{note: C4, dur: w}]\n")
+        doc.patterns["p"].bars[0][0] = NoteEvent(note="C4", dur="w", dyn="loudish")
+        codes = [d.code for d in validate(doc)]
+        assert "INVALID_DYNAMIC" in codes
+
+    def test_fmt_preserves_dyn(self):
+        doc = _doc_with_pattern(
+            "    bars:\n"
+            "    - [{note: C4, dur: h, dyn: mf}, {note: D4, dur: h, dyn: sfz}]\n"
+        )
+        output = fmt(doc)
+        assert "dyn: mf" in output
+        assert "dyn: sfz" in output
+        assert "vel:" not in output
+        assert fmt(parse(output)) == output
+
+
+class TestSwingUnit:
+    def test_sixteenth_swing_displaces_off_sixteenths(self):
+        doc = _doc_with_pattern(
+            "    swing: 60\n"
+            "    swing_unit: 16\n"
+            "    bars:\n"
+            "    - [{beat: 1, note: C4, dur: s}, {beat: 1.25, note: D4, dur: s},\n"
+            "       {beat: 1.5, note: E4, dur: s}, {beat: 1.75, note: F4, dur: s}]\n"
+        )
+        resolved = resolve(doc)
+        ticks = [n.tick for n in resolved.tracks[0].notes]
+        # beat 1.25 → 1 + 0.5*0.60 = 1.30 → 144; beat 1.75 → 1.5 + 0.5*0.60 = 1.80 → 384
+        # on-eighth positions (1, 1.5) are pair starts and unaffected
+        assert ticks == [0, 144, 240, 384]
+
+    def test_eighth_swing_unchanged_default(self):
+        doc = _doc_with_pattern(
+            "    swing: 67\n"
+            "    bars:\n"
+            "    - [{beat: 1, note: C4, dur: e}, {beat: 1.5, note: D4, dur: e}, {rest: hd, beat: 2}]\n"
+        )
+        resolved = resolve(doc)
+        ticks = [n.tick for n in resolved.tracks[0].notes]
+        assert ticks == [0, round(0.67 * 480)]
+
+    def test_invalid_swing_unit_rejected_by_schema(self):
+        with pytest.raises(ParseError):
+            _doc_with_pattern(
+                "    swing: 60\n"
+                "    swing_unit: 12\n"
+                "    bars:\n"
+                "    - [{note: C4, dur: w}]\n"
+            )
+
+    def test_fmt_writes_non_default_swing_unit(self):
+        doc = _doc_with_pattern(
+            "    swing: 60\n"
+            "    swing_unit: 16\n"
+            "    bars:\n"
+            "    - [{note: C4, dur: w}]\n"
+        )
+        output = fmt(doc)
+        assert "swing_unit: 16" in output
+        assert fmt(parse(output)) == output
+
+
+class TestSectionKey:
+    def test_section_key_used_for_scale_validation(self):
+        # F#4 is out of C major but in G major
+        doc = _doc_with_pattern(
+            "    bars:\n    - [{note: F#4, dur: w}]\n",
+            song_extra="  key: C major\n  scale_mode: strict\n",
+            section_extra="    key: G major\n",
+        )
+        assert [d for d in validate(doc) if d.code == "OUT_OF_SCALE"] == []
+
+    def test_song_key_flags_out_of_scale_without_override(self):
+        doc = _doc_with_pattern(
+            "    bars:\n    - [{note: F#4, dur: w}]\n",
+            song_extra="  key: C major\n  scale_mode: strict\n",
+        )
+        assert any(d.code == "OUT_OF_SCALE" for d in validate(doc))
+
+    def test_invalid_section_key(self):
+        from muq.model import Section
+        doc = _doc_with_pattern("    bars:\n    - [{note: C4, dur: w}]\n")
+        doc.arrangement[0] = Section(name="main", patterns={"piano": "p"}, key="H sharpish")
+        codes = [d.code for d in validate(doc)]
+        assert "INVALID_KEY_SIGNATURE" in codes
+
+    def test_fmt_writes_section_key(self):
+        doc = _doc_with_pattern(
+            "    bars:\n    - [{note: C4, dur: w}]\n",
+            section_extra="    key: D major\n",
+        )
+        output = fmt(doc)
+        assert "key: D major" in output
+        assert fmt(parse(output)) == output
+
+
+class TestLegatoGate:
+    def test_legato_overlaps_slightly(self):
+        doc = _doc_with_pattern(
+            "    bars:\n"
+            "    - [{note: C4, dur: q, articulation: legato}, {note: D4, dur: q}, {rest: h}]\n"
+        )
+        notes = resolve(doc).tracks[0].notes
+        assert notes[0].duration_ticks == round(1.05 * 480)  # 504 — overlaps into D4
+        assert notes[1].tick == 480
+
+    def test_legato_same_pitch_still_clamped(self):
+        doc = _doc_with_pattern(
+            "    bars:\n"
+            "    - [{note: C4, dur: q, articulation: legato}, {note: C4, dur: q}, {rest: h}]\n"
+        )
+        notes = resolve(doc).tracks[0].notes
+        assert notes[0].tick + notes[0].duration_ticks <= notes[1].tick
+
+
+class TestInterpFirstEvent:
+    def test_linear_without_previous_degrades_to_step(self):
+        doc = _doc_with_pattern(
+            "    bars:\n"
+            "    - [{note: C4, dur: w}, {beat: 3, cc: 74, value: 100, interp: linear}]\n"
+        )
+        mid = to_midi(resolve(doc))
+        ccs = [m for t in mid.tracks for m in t
+               if m.type == "control_change" and m.control == 74]
+        # No implicit ramp from 0 — a single CC message at beat 3
+        assert len(ccs) == 1
+        assert ccs[0].value == 100
+
+    def test_linear_with_previous_still_ramps(self):
+        doc = _doc_with_pattern(
+            "    bars:\n"
+            "    - [{note: C4, dur: w}, {beat: 1, cc: 74, value: 20},\n"
+            "       {beat: 3, cc: 74, value: 100, interp: linear}]\n"
+        )
+        mid = to_midi(resolve(doc))
+        ccs = [m for t in mid.tracks for m in t
+               if m.type == "control_change" and m.control == 74]
+        assert len(ccs) > 2  # endpoints plus intermediate ramp steps
+
+
+class TestSectionMarkers:
+    def test_markers_emitted_per_section(self):
+        doc = parse("""
+song:
+  tempo: 120
+  time: "4/4"
+tracks:
+  piano:
+    instrument: acoustic_grand_piano
+    channel: 1
+patterns:
+  p:
+    bars:
+    - [{note: C4, dur: w}]
+arrangement:
+  - name: intro
+    patterns:
+      piano: p
+  - name: verse
+    repeat: 2
+    patterns:
+      piano: p
+""")
+        resolved = resolve(doc)
+        assert [(m.tick, m.text) for m in resolved.markers] == [(0, "intro"), (1920, "verse")]
+        mid = to_midi(resolved)
+        markers = [m for m in mid.tracks[0] if m.type == "marker"]
+        assert [m.text for m in markers] == ["intro", "verse"]
+
+

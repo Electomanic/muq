@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import mido
 
@@ -120,7 +120,7 @@ def _event_sort_priority(msg) -> int:
 
 
 def _write_meta_track(track: mido.MidiTrack, song: ResolvedSong) -> None:
-    """Write tempo and time signature events to track 0."""
+    """Write tempo, time signature, and section marker events to track 0."""
     messages: list[tuple[int, mido.MetaMessage]] = []
 
     for t in song.tempos:
@@ -136,6 +136,11 @@ def _write_meta_track(track: mido.MidiTrack, song: ResolvedSong) -> None:
             time=0,
         )))
 
+    for mk in song.markers:
+        messages.append((mk.tick, mido.MetaMessage(
+            "marker", text=mk.text, time=0)))
+
+    # Stable sort: tempo/time-sig precede markers at the same tick (§C.5)
     messages.sort(key=lambda m: m[0])
 
     prev_tick = 0
@@ -248,14 +253,18 @@ def _expand_automation_lane(
     ``make_msg(value)`` constructs the MIDI message for a given value.
     """
     lo, hi = clamp
+    has_prev = False
     prev_val = 0
     prev_tick = 0
     for ev in events:
-        if ev.interp == "linear" and ev.tick > prev_tick:
+        # §14.5: linear with no previous event degrades to step — no
+        # implicit ramp from 0
+        if has_prev and ev.interp == "linear" and ev.tick > prev_tick:
             for t, v in _lerp_steps(
                 prev_tick, ev.tick, prev_val, ev.value, step_ticks
             ):
                 messages.append((t, make_msg(max(lo, min(hi, v)))))
         messages.append((ev.tick, make_msg(ev.value)))
+        has_prev = True
         prev_val = ev.value
         prev_tick = ev.tick
